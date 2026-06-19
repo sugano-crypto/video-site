@@ -1,23 +1,9 @@
 [
   {
-    "id": "VIDEO_ID_1",
-    "title": "サンプル動画 1",
-    "description": "これはサンプル動画の説明文です。ここに動画の内容を記載してください。",
-    "url": "https://www.youtube.com/watch?v=VIDEO_ID_1",
+    "id": "pviAjG-9fJY",
+    "title": "リハビリ動画",
+    "description": "左手指痙縮のリハビリをしているところです",
+    "url": "https://www.youtube.com/watch?v=pviAjG-9fJY",
     "date": "2026-06-19"
-  },
-  {
-    "id": "VIDEO_ID_2",
-    "title": "サンプル動画 2",
-    "description": "2本目のサンプル動画です。限定公開URLを設定してください。",
-    "url": "https://www.youtube.com/watch?v=VIDEO_ID_2",
-    "date": "2026-06-10"
-  },
-  {
-    "id": "VIDEO_ID_3",
-    "title": "サンプル動画 3",
-    "description": "3本目のサンプル動画です。",
-    "url": "https://www.youtube.com/watch?v=VIDEO_ID_3",
-    "date": "2026-05-20"
   }
 ]
