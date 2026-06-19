@@ -150,7 +150,7 @@
     </div>
     <div class="header-right">
       <span class="user-email" id="user-email"></span>
-      <button class="header-btn admin" onclick="location.href='admin.html'">＋ 動画登録</button>
+      <button class="header-btn admin" id="admin-btn" onclick="location.href='admin.html'" style="display:none;">＋ 動画登録</button>
       <button class="header-btn" onclick="showChangePassword()">パスワード変更</button>
       <button class="header-btn" onclick="doLogout()">ログアウト</button>
     </div>
@@ -185,8 +185,14 @@
 <script>
   const SUPABASE_URL = "https://bicqctaxvponqbzjsjbw.supabase.co";
   const SUPABASE_KEY = "sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr";
+  const ADMIN_EMAIL  = "sugano@sugacon.net";
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  function updateAdminBtn(email) {
+    const btn = document.getElementById("admin-btn");
+    if (btn) btn.style.display = (email === ADMIN_EMAIL) ? "inline-block" : "none";
+  }
 
   const screens = ["login-screen","reset-screen","newpw-screen"];
   function showScreen(id) {
@@ -208,7 +214,7 @@
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
     btn.disabled = false; btn.textContent = "ログイン";
     if (error) { msg.textContent = "メールアドレスまたはパスワードが正しくありません"; }
-    else { document.getElementById("user-email").textContent = data.user.email; showMain(); loadVideos(); }
+    else { document.getElementById("user-email").textContent = data.user.email; updateAdminBtn(data.user.email); showMain(); loadVideos(); }
   }
 
   async function doReset() {
@@ -304,6 +310,7 @@
     const { data: { session } } = await sb.auth.getSession();
     if (session) {
       document.getElementById("user-email").textContent = session.user.email;
+      updateAdminBtn(session.user.email);
       showMain(); loadVideos();
     } else { showLogin(); }
   });
