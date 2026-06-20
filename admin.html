@@ -274,38 +274,42 @@
     const tempPw = generateTempPassword();
     btn.disabled = true; btn.textContent = "発行中...";
 
-    // Supabase Authにユーザー作成（signUp）
-    const { data, error } = await sb.auth.signUp({
-      email,
-      password: tempPw,
-      options: { data: { is_first_login: true } }
-    });
+    try {
+      // Supabase SDKでユーザー作成
+      const { data, error } = await sb.auth.signUp({ email, password: tempPw });
 
-    if (error) {
+      if (error) {
+        btn.disabled = false; btn.textContent = "アカウントを発行する";
+        msg.className="msg error"; msg.textContent="発行に失敗しました: "+error.message;
+        return;
+      }
+
+      // user_profilesテーブルに追加
+      if (data.user) {
+        const { error: profileError } = await sb.from("user_profiles").upsert({
+          id: data.user.id,
+          email: email,
+          is_first_login: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        if (profileError) console.error("Profile error:", profileError);
+      }
+
       btn.disabled = false; btn.textContent = "アカウントを発行する";
-      msg.className="msg error"; msg.textContent="発行に失敗しました: "+error.message;
-      return;
+
+      // 結果表示
+      document.getElementById("result-email").textContent = email;
+      document.getElementById("result-pw").textContent = tempPw;
+      document.getElementById("result-box").classList.add("show");
+      document.getElementById("new-user-email").value = "";
+      loadUserList();
+
+    } catch(e) {
+      btn.disabled = false; btn.textContent = "アカウントを発行する";
+      msg.className="msg error"; msg.textContent="エラーが発生しました: "+e.message;
+      console.error(e);
     }
-
-    // user_profilesテーブルに追加
-    if (data.user) {
-      await sb.from("user_profiles").upsert({
-        id: data.user.id,
-        email: email,
-        is_first_login: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-    }
-
-    btn.disabled = false; btn.textContent = "アカウントを発行する";
-
-    // 結果表示
-    document.getElementById("result-email").textContent = email;
-    document.getElementById("result-pw").textContent = tempPw;
-    document.getElementById("result-box").classList.add("show");
-    document.getElementById("new-user-email").value = "";
-    loadUserList();
   }
 
   // コピー
