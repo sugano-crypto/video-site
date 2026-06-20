@@ -274,30 +274,32 @@
     const tempPw = generateTempPassword();
     btn.disabled = true; btn.textContent = "発行中...";
 
-    try {
-      // Supabase SQL経由でユーザー作成
-      const { data, error } = await sb.rpc('create_user_with_profile', {
-        user_email: email,
-        user_password: tempPw
-      });
+   try {
+  const { data: { session } } = await sb.auth.getSession();
 
-      if (error) {
-        btn.disabled = false; btn.textContent = "アカウントを発行する";
-        msg.className="msg error"; msg.textContent="発行に失敗しました: "+error.message;
-        return;
-      }
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ email, password: tempPw }),
+  });
 
-      btn.disabled = false; btn.textContent = "アカウントを発行する";
-      document.getElementById("result-email").textContent = email;
-      document.getElementById("result-pw").textContent = tempPw;
-      document.getElementById("result-box").classList.add("show");
-      document.getElementById("new-user-email").value = "";
-      loadUserList();
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.error);
 
-    } catch(e) {
-      btn.disabled = false; btn.textContent = "アカウントを発行する";
-      msg.className="msg error"; msg.textContent="エラー: "+e.message;
-    }
+  btn.disabled = false; btn.textContent = "アカウントを発行する";
+  document.getElementById("result-email").textContent = email;
+  document.getElementById("result-pw").textContent = tempPw;
+  document.getElementById("result-box").classList.add("show");
+  document.getElementById("new-user-email").value = "";
+  loadUserList();
+
+} catch(e) {
+  btn.disabled = false; btn.textContent = "アカウントを発行する";
+  msg.className="msg error"; msg.textContent="エラー: "+e.message;
+}
   }
 
   // コピー
