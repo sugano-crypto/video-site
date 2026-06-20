@@ -161,6 +161,45 @@
         <div class="empty">読み込み中...</div>
       </div>
     </div>
+
+    <!-- ユーザー追加セクション -->
+    <div class="page-title" style="margin-bottom:8px; margin-top:8px;">ユーザーを追加する</div>
+    <div class="page-sub">メールアドレスを入力してパスワード設定リンクを発行します。リンクをコピーして外注さんに送ってください。</div>
+    <div class="card">
+      <div class="form-group">
+        <label>メールアドレス</label>
+        <input type="email" id="new-user-email" placeholder="example@email.com" />
+      </div>
+      <div class="form-group">
+        <label>初期パスワード</label>
+        <input type="text" id="new-user-pw" placeholder="8文字以上" />
+        <div class="hint">このパスワードでユーザーが初回ログインします。ログイン後に変更できます。</div>
+      </div>
+      <button class="submit-btn" id="add-user-btn" onclick="addUser()">ユーザーを追加する</button>
+      <div class="msg" id="add-user-msg"></div>
+
+      <!-- 発行されたリンク -->
+      <div id="user-link-box" style="display:none; margin-top:20px; background:var(--gray-100); border-radius:10px; padding:16px; border:1px solid var(--gray-200);">
+        <div style="font-size:13px; font-weight:600; color:var(--navy); margin-bottom:8px;">✅ ユーザーを追加しました！</div>
+        <div style="font-size:12px; color:var(--gray-600); margin-bottom:8px;">以下のログイン情報を外注さんに伝えてください：</div>
+        <div style="background:white; border-radius:8px; padding:12px; border:1px solid var(--gray-200);">
+          <div style="font-size:12px; color:var(--gray-400); margin-bottom:4px;">ログインURL</div>
+          <div style="font-size:13px; color:var(--navy); margin-bottom:12px;">https://sugano-crypto.github.io/video-site/</div>
+          <div style="font-size:12px; color:var(--gray-400); margin-bottom:4px;">メールアドレス</div>
+          <div id="display-email" style="font-size:13px; color:var(--navy); margin-bottom:12px;"></div>
+          <div style="font-size:12px; color:var(--gray-400); margin-bottom:4px;">初期パスワード</div>
+          <div id="display-pw" style="font-size:13px; color:var(--navy);"></div>
+        </div>
+        <button onclick="copyLoginInfo()" style="margin-top:12px; width:100%; padding:10px; background:var(--navy); color:white; border:none; border-radius:8px; font-size:13px; font-family:inherit; cursor:pointer;">📋 ログイン情報をコピー</button>
+        <div id="copy-msg" style="font-size:12px; color:#27ae60; text-align:center; margin-top:8px; display:none;">コピーしました！</div>
+      </div>
+    </div>
+
+    <!-- 登録済みユーザー一覧 -->
+    <div class="page-title" style="margin-bottom:16px;">登録済みユーザー</div>
+    <div class="card">
+      <div id="user-list"><div class="empty">読み込み中...</div></div>
+    </div>
   </div>
 </div>
 
@@ -286,8 +325,93 @@
     } else {
       document.getElementById("main-content").style.display = "block";
       loadVideoList();
+      loadUserList();
     }
   });
+
+  // ユーザー追加
+  async function addUser() {
+    const email = document.getElementById("new-user-email").value.trim();
+    const pw    = document.getElementById("new-user-pw").value.trim();
+    const msg   = document.getElementById("add-user-msg");
+    const btn   = document.getElementById("add-user-btn");
+    msg.className = "msg"; msg.style.display = "none";
+
+    if (!email) { msg.className="msg error"; msg.textContent="メールアドレスを入力してください"; return; }
+    if (pw.length < 8) { msg.className="msg error"; msg.textContent="パスワードは8文字以上にしてください"; return; }
+
+    btn.disabled = true; btn.textContent = "追加中...";
+
+    // Supabase Admin APIでユーザー作成
+    const SUPABASE_URL = "https://bicqctaxvponqbzjsjbw.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr";
+
+    // signUpを使ってユーザー作成（メール確認なし）
+    const { data, error } = await sb.auth.admin ? 
+      sb.auth.admin.createUser({ email, password: pw, email_confirm: true }) :
+      await createUserViaSignup(email, pw);
+
+    btn.disabled = false; btn.textContent = "ユーザーを追加する";
+
+    if (error) {
+      msg.className = "msg error"; msg.textContent = "追加に失敗しました: " + error.message;
+    } else {
+      document.getElementById("display-email").textContent = email;
+      document.getElementById("display-pw").textContent = pw;
+      document.getElementById("user-link-box").style.display = "block";
+      document.getElementById("new-user-email").value = "";
+      document.getElementById("new-user-pw").value = "";
+      loadUserList();
+    }
+  }
+
+  async function createUserViaSignup(email, password) {
+    const res = await fetch("https://bicqctaxvponqbzjsjbw.supabase.co/auth/v1/admin/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": "sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr",
+        "Authorization": "Bearer sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr"
+      },
+      body: JSON.stringify({ email, password, email_confirm: true })
+    });
+    const data = await res.json();
+    if (!res.ok) return { data: null, error: { message: data.message || "作成失敗" } };
+    return { data, error: null };
+  }
+
+  // ログイン情報をコピー
+  function copyLoginInfo() {
+    const email = document.getElementById("display-email").textContent;
+    const pw    = document.getElementById("display-pw").textContent;
+    const text  = `【ログイン情報】\nURL: https://sugano-crypto.github.io/video-site/\nメールアドレス: ${email}\nパスワード: ${pw}`;
+    navigator.clipboard.writeText(text).then(() => {
+      document.getElementById("copy-msg").style.display = "block";
+      setTimeout(() => { document.getElementById("copy-msg").style.display = "none"; }, 2000);
+    });
+  }
+
+  // 登録済みユーザー一覧
+  async function loadUserList() {
+    const res = await fetch("https://bicqctaxvponqbzjsjbw.supabase.co/auth/v1/admin/users", {
+      headers: {
+        "apikey": "sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr",
+        "Authorization": "Bearer sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr"
+      }
+    });
+    const data = await res.json();
+    const list = document.getElementById("user-list");
+    const users = data.users || [];
+    if (users.length === 0) { list.innerHTML = '<div class="empty">ユーザーがいません</div>'; return; }
+    list.innerHTML = users.map(u => `
+      <div class="video-item">
+        <div class="video-item-info">
+          <div class="video-item-title">${esc(u.email)}</div>
+          <div class="video-item-date">登録日: ${fmtDate(u.created_at)}</div>
+        </div>
+      </div>
+    `).join("");
+  }
 </script>
 </body>
 </html>
