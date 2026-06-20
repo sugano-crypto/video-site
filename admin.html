@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>動画登録｜すがコンサルティング＆パートナーズ</title>
+  <title>管理画面｜すがコンサルティング＆パートナーズ</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
@@ -14,7 +14,6 @@
       --gray-400: #8fa3b8; --gray-600: #4a6280; --text: #1e3450;
     }
     body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); color: var(--text); min-height: 100vh; }
-
     .header { background: var(--white); border-bottom: 1px solid var(--gray-200); padding: 0 28px; height: 60px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 6px rgba(26,58,92,0.07); }
     .header-brand { display: flex; align-items: center; gap: 12px; }
     .header-logo { width: 38px; height: 38px; object-fit: contain; }
@@ -22,28 +21,23 @@
     .header-title span { display: block; font-size: 10px; font-weight: 400; color: var(--gray-400); }
     .header-btn { background: transparent; border: 1.5px solid var(--gray-200); color: var(--gray-600); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-family: inherit; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; }
     .header-btn:hover { border-color: var(--sky); color: var(--navy); background: var(--sky-light); }
-
     .container { max-width: 800px; margin: 0 auto; padding: 40px 24px; }
-
     .page-title { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
     .page-title::before { content: ''; display: block; width: 4px; height: 24px; background: linear-gradient(to bottom, var(--sky), var(--navy)); border-radius: 2px; }
     .page-sub { font-size: 13px; color: var(--gray-400); margin-bottom: 32px; padding-left: 14px; }
-
     .card { background: var(--white); border-radius: 16px; padding: 32px; border: 1px solid var(--gray-200); box-shadow: 0 2px 12px rgba(26,58,92,0.06); margin-bottom: 24px; }
-
     .form-group { margin-bottom: 22px; }
     .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--gray-600); margin-bottom: 8px; }
-    .form-group input, .form-group textarea {
-      width: 100%; padding: 12px 14px; background: var(--gray-100);
-      border: 1.5px solid var(--gray-200); border-radius: 8px;
-      color: var(--text); font-size: 14px; font-family: inherit;
-      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .form-group input:focus, .form-group textarea:focus {
-      border-color: var(--sky); box-shadow: 0 0 0 3px rgba(74,144,217,0.12); background: var(--white);
-    }
+    .form-group input, .form-group textarea { width: 100%; padding: 12px 14px; background: var(--gray-100); border: 1.5px solid var(--gray-200); border-radius: 8px; color: var(--text); font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .form-group input:focus, .form-group textarea:focus { border-color: var(--sky); box-shadow: 0 0 0 3px rgba(74,144,217,0.12); background: var(--white); }
     .form-group textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
     .hint { font-size: 11px; color: var(--gray-400); margin-top: 5px; }
+    .submit-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, var(--navy-mid) 0%, var(--navy) 100%); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.2s; }
+    .submit-btn:hover { opacity: 0.88; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { font-size: 13px; text-align: center; margin-top: 16px; padding: 12px; border-radius: 8px; display: none; }
+    .msg.error   { background: #fdf0f0; color: #c0392b; border: 1px solid #f5c6c6; display: block; }
+    .msg.success { background: #f0fdf4; color: #27ae60; border: 1px solid #b7f0c8; display: block; }
 
     /* プレビュー */
     .preview-box { display: none; background: var(--gray-100); border-radius: 12px; overflow: hidden; border: 1px solid var(--gray-200); margin-top: 16px; }
@@ -54,19 +48,7 @@
     .preview-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
     .preview-id { font-size: 11px; color: var(--gray-400); }
 
-    .submit-btn {
-      width: 100%; padding: 15px; background: linear-gradient(135deg, var(--navy-mid) 0%, var(--navy) 100%);
-      color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700;
-      font-family: inherit; cursor: pointer; transition: opacity 0.2s; letter-spacing: 0.05em;
-    }
-    .submit-btn:hover { opacity: 0.88; }
-    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .msg { font-size: 13px; text-align: center; margin-top: 16px; padding: 12px; border-radius: 8px; display: none; }
-    .msg.error   { background: #fdf0f0; color: #c0392b; border: 1px solid #f5c6c6; display: block; }
-    .msg.success { background: #f0fdf4; color: #27ae60; border: 1px solid #b7f0c8; display: block; }
-
-    /* 動画一覧 */
+    /* リスト */
     .video-list { display: flex; flex-direction: column; gap: 12px; }
     .video-item { display: flex; align-items: center; gap: 14px; background: var(--gray-100); border-radius: 10px; padding: 12px 14px; border: 1px solid var(--gray-200); }
     .video-item-thumb { width: 80px; height: 45px; object-fit: cover; border-radius: 6px; flex-shrink: 0; background: var(--gray-200); }
@@ -75,13 +57,28 @@
     .video-item-date { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
     .delete-btn { background: transparent; border: 1.5px solid #f5c6c6; color: #c0392b; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-family: inherit; cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
     .delete-btn:hover { background: #fdf0f0; }
-
     .empty { text-align: center; padding: 40px; color: var(--gray-400); font-size: 14px; }
 
-    #not-auth { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: var(--gray-100); }
-    .not-auth-box { background: white; border-radius: 16px; padding: 48px; text-align: center; box-shadow: 0 4px 24px rgba(26,58,92,0.10); }
-    .not-auth-box p { color: var(--gray-400); margin-bottom: 24px; }
-    .back-btn { background: linear-gradient(135deg, var(--navy-mid), var(--navy)); color: white; border: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-family: inherit; cursor: pointer; }
+    /* ユーザー発行結果 */
+    .result-box { display: none; margin-top: 20px; background: #f0fdf4; border: 1px solid #b7f0c8; border-radius: 12px; padding: 20px; }
+    .result-box.show { display: block; }
+    .result-title { font-size: 14px; font-weight: 700; color: #27ae60; margin-bottom: 12px; }
+    .result-info { background: white; border-radius: 8px; padding: 14px; border: 1px solid var(--gray-200); margin-bottom: 12px; }
+    .result-label { font-size: 11px; color: var(--gray-400); margin-bottom: 3px; }
+    .result-value { font-size: 14px; font-weight: 600; color: var(--navy); margin-bottom: 10px; }
+    .result-value:last-child { margin-bottom: 0; }
+    .copy-btn { width: 100%; padding: 10px; background: var(--navy); color: white; border: none; border-radius: 8px; font-size: 13px; font-family: inherit; cursor: pointer; transition: opacity 0.2s; }
+    .copy-btn:hover { opacity: 0.85; }
+    .copy-success { font-size: 12px; color: #27ae60; text-align: center; margin-top: 6px; display: none; }
+
+    /* ユーザー一覧 */
+    .user-item { display: flex; align-items: center; gap: 14px; background: var(--gray-100); border-radius: 10px; padding: 12px 14px; border: 1px solid var(--gray-200); margin-bottom: 10px; }
+    .user-item-info { flex: 1; }
+    .user-item-email { font-size: 13px; font-weight: 600; color: var(--text); }
+    .user-item-meta { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge.first { background: #fff3cd; color: #856404; }
+    .badge.done  { background: #d1ecf1; color: #0c5460; }
 
     @media (max-width: 600px) {
       .container { padding: 24px 16px; }
@@ -92,139 +89,114 @@
 </head>
 <body>
 
-<!-- 未認証表示 -->
-<div id="not-auth" style="display:none; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;">
-  <div class="not-auth-box">
-    <p>ログインが必要です</p>
-    <button class="back-btn" onclick="location.href='index.html'">ログインページへ</button>
+<div id="not-auth" style="display:none; position:fixed; inset:0; background:var(--gray-100); align-items:center; justify-content:center; flex-direction:column;">
+  <div style="background:white; border-radius:16px; padding:48px; text-align:center; box-shadow:0 4px 24px rgba(26,58,92,0.10);">
+    <p style="color:var(--gray-400); margin-bottom:24px;">管理者のみアクセスできます</p>
+    <button onclick="location.href='index.html'" style="background:linear-gradient(135deg,var(--navy-mid),var(--navy)); color:white; border:none; padding:12px 32px; border-radius:8px; font-size:14px; font-family:inherit; cursor:pointer;">ログインページへ</button>
   </div>
 </div>
 
-<!-- メイン -->
 <div id="main-content" style="display:none;">
   <header class="header">
     <div class="header-brand">
       <img src="logo.png" alt="ロゴ" class="header-logo" />
-      <div class="header-title">
-        すがコンサルティング＆パートナーズ
-        <span>動画管理ページ</span>
-      </div>
+      <div class="header-title">すがコンサルティング＆パートナーズ<span>管理画面</span></div>
     </div>
     <a href="index.html" class="header-btn">← 動画一覧に戻る</a>
   </header>
 
   <div class="container">
+
+    <!-- ① 動画登録 -->
     <div class="page-title">動画を登録する</div>
     <div class="page-sub">YouTubeのURLを貼り付けてタイトルと説明を入力してください</div>
-
-    <!-- 登録フォーム -->
     <div class="card">
       <div class="form-group">
         <label>YouTube URL</label>
         <input type="text" id="yt-url" placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX" oninput="onUrlInput()" />
         <div class="hint">限定公開動画のURLをそのまま貼り付けてください</div>
-        <!-- プレビュー -->
         <div class="preview-box" id="preview-box">
-          <div class="preview-thumb">
-            <img id="preview-img" src="" alt="サムネイル" />
-          </div>
+          <div class="preview-thumb"><img id="preview-img" src="" alt="サムネイル" /></div>
           <div class="preview-info">
             <div class="preview-title" id="preview-title"></div>
             <div class="preview-id" id="preview-id"></div>
           </div>
         </div>
       </div>
-
       <div class="form-group">
         <label>タイトル</label>
         <input type="text" id="vid-title" placeholder="動画のタイトルを入力" />
       </div>
-
       <div class="form-group">
         <label>説明文</label>
         <textarea id="vid-desc" placeholder="動画の内容を説明してください"></textarea>
       </div>
-
       <div class="form-group">
         <label>公開日</label>
         <input type="date" id="vid-date" />
       </div>
-
       <button class="submit-btn" id="submit-btn" onclick="submitVideo()">登録する</button>
       <div class="msg" id="submit-msg"></div>
     </div>
 
-    <!-- 登録済み動画一覧 -->
+    <!-- ② 登録済み動画一覧 -->
     <div class="page-title" style="margin-bottom:16px;">登録済み動画</div>
     <div class="card">
-      <div class="video-list" id="video-list">
-        <div class="empty">読み込み中...</div>
-      </div>
+      <div class="video-list" id="video-list"><div class="empty">読み込み中...</div></div>
     </div>
 
-    <!-- ユーザー追加セクション -->
-    <div class="page-title" style="margin-bottom:8px; margin-top:8px;">ユーザーを追加する</div>
-    <div class="page-sub">メールアドレスを入力してパスワード設定リンクを発行します。リンクをコピーして外注さんに送ってください。</div>
+    <!-- ③ ユーザー事前発行 -->
+    <div class="page-title" style="margin-bottom:8px;">ユーザーアカウントを発行する</div>
+    <div class="page-sub">メールアドレスを登録すると仮パスワードが自動生成されます。仮パスワードをLINEやメールで本人に送ってください。初回ログイン時にパスワード変更が必須です。</div>
     <div class="card">
       <div class="form-group">
         <label>メールアドレス</label>
         <input type="email" id="new-user-email" placeholder="example@email.com" />
       </div>
-      <div class="form-group">
-        <label>初期パスワード</label>
-        <input type="text" id="new-user-pw" placeholder="8文字以上" />
-        <div class="hint">このパスワードでユーザーが初回ログインします。ログイン後に変更できます。</div>
-      </div>
-      <button class="submit-btn" id="add-user-btn" onclick="addUser()">ユーザーを追加する</button>
-      <div class="msg" id="add-user-msg"></div>
+      <button class="submit-btn" id="issue-btn" onclick="issueUser()">アカウントを発行する</button>
+      <div class="msg" id="issue-msg"></div>
 
-      <!-- 発行されたリンク -->
-      <div id="user-link-box" style="display:none; margin-top:20px; background:var(--gray-100); border-radius:10px; padding:16px; border:1px solid var(--gray-200);">
-        <div style="font-size:13px; font-weight:600; color:var(--navy); margin-bottom:8px;">✅ ユーザーを追加しました！</div>
-        <div style="font-size:12px; color:var(--gray-600); margin-bottom:8px;">以下のログイン情報を外注さんに伝えてください：</div>
-        <div style="background:white; border-radius:8px; padding:12px; border:1px solid var(--gray-200);">
-          <div style="font-size:12px; color:var(--gray-400); margin-bottom:4px;">ログインURL</div>
-          <div style="font-size:13px; color:var(--navy); margin-bottom:12px;">https://sugano-crypto.github.io/video-site/</div>
-          <div style="font-size:12px; color:var(--gray-400); margin-bottom:4px;">メールアドレス</div>
-          <div id="display-email" style="font-size:13px; color:var(--navy); margin-bottom:12px;"></div>
-          <div style="font-size:12px; color:var(--gray-400); margin-bottom:4px;">初期パスワード</div>
-          <div id="display-pw" style="font-size:13px; color:var(--navy);"></div>
+      <!-- 発行結果 -->
+      <div class="result-box" id="result-box">
+        <div class="result-title">✅ アカウントを発行しました！</div>
+        <div class="result-info">
+          <div class="result-label">ログインURL</div>
+          <div class="result-value">https://sugano-crypto.github.io/video-site/</div>
+          <div class="result-label">メールアドレス</div>
+          <div class="result-value" id="result-email"></div>
+          <div class="result-label">仮パスワード（初回ログイン後に変更必須）</div>
+          <div class="result-value" id="result-pw"></div>
         </div>
-        <button onclick="copyLoginInfo()" style="margin-top:12px; width:100%; padding:10px; background:var(--navy); color:white; border:none; border-radius:8px; font-size:13px; font-family:inherit; cursor:pointer;">📋 ログイン情報をコピー</button>
-        <div id="copy-msg" style="font-size:12px; color:#27ae60; text-align:center; margin-top:8px; display:none;">コピーしました！</div>
+        <button class="copy-btn" onclick="copyResult()">📋 ログイン情報をコピー</button>
+        <div class="copy-success" id="copy-success">コピーしました！</div>
       </div>
     </div>
 
-    <!-- 登録済みユーザー一覧 -->
+    <!-- ④ 登録済みユーザー一覧 -->
     <div class="page-title" style="margin-bottom:16px;">登録済みユーザー</div>
     <div class="card">
       <div id="user-list"><div class="empty">読み込み中...</div></div>
     </div>
+
   </div>
 </div>
 
 <script>
   const SUPABASE_URL = "https://bicqctaxvponqbzjsjbw.supabase.co";
   const SUPABASE_KEY = "sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr";
+  const ADMIN_EMAIL  = "bom3606@gmail.com";
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // 今日の日付をデフォルトに
   document.getElementById("vid-date").value = new Date().toISOString().split("T")[0];
 
-  // YouTubeのURLからIDを抽出
+  // YouTube ID抽出
   function extractYouTubeId(url) {
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/
-    ];
-    for (const p of patterns) {
-      const m = url.match(p);
-      if (m) return m[1];
-    }
-    return null;
+    const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+    return m ? m[1] : null;
   }
 
-  // URLが入力されたらプレビューを表示
+  // URLプレビュー
   function onUrlInput() {
     const url = document.getElementById("yt-url").value.trim();
     const id = extractYouTubeId(url);
@@ -234,12 +206,10 @@
       document.getElementById("preview-title").textContent = `Video ID: ${id}`;
       document.getElementById("preview-id").textContent = url;
       box.classList.add("show");
-    } else {
-      box.classList.remove("show");
-    }
+    } else { box.classList.remove("show"); }
   }
 
-  // 動画を登録
+  // 動画登録
   async function submitVideo() {
     const url   = document.getElementById("yt-url").value.trim();
     const title = document.getElementById("vid-title").value.trim();
@@ -247,80 +217,132 @@
     const date  = document.getElementById("vid-date").value;
     const msg   = document.getElementById("submit-msg");
     const btn   = document.getElementById("submit-btn");
-
     msg.className = "msg"; msg.style.display = "none";
-
     const youtubeId = extractYouTubeId(url);
-    if (!youtubeId) { msg.className = "msg error"; msg.textContent = "有効なYouTube URLを入力してください"; return; }
-    if (!title)     { msg.className = "msg error"; msg.textContent = "タイトルを入力してください"; return; }
-    if (!date)      { msg.className = "msg error"; msg.textContent = "公開日を入力してください"; return; }
-
+    if (!youtubeId) { msg.className="msg error"; msg.textContent="有効なYouTube URLを入力してください"; return; }
+    if (!title)     { msg.className="msg error"; msg.textContent="タイトルを入力してください"; return; }
     btn.disabled = true; btn.textContent = "登録中...";
-
-    const { error } = await sb.from("videos").insert({
-      youtube_id:  youtubeId,
-      title:       title,
-      description: desc,
-      url:         url,
-      date:        date
-    });
-
+    const { error } = await sb.from("videos").insert({ youtube_id: youtubeId, title, description: desc, url, date });
     btn.disabled = false; btn.textContent = "登録する";
-
-    if (error) {
-      msg.className = "msg error"; msg.textContent = "登録に失敗しました: " + error.message;
-    } else {
-      msg.className = "msg success"; msg.textContent = "✅ 登録しました！";
-      document.getElementById("yt-url").value = "";
-      document.getElementById("vid-title").value = "";
-      document.getElementById("vid-desc").value = "";
-      document.getElementById("vid-date").value = new Date().toISOString().split("T")[0];
-      document.getElementById("preview-box").classList.remove("show");
-      loadVideoList();
-    }
+    if (error) { msg.className="msg error"; msg.textContent="登録に失敗しました: "+error.message; }
+    else { msg.className="msg success"; msg.textContent="✅ 登録しました！"; document.getElementById("yt-url").value=""; document.getElementById("vid-title").value=""; document.getElementById("vid-desc").value=""; document.getElementById("preview-box").classList.remove("show"); loadVideoList(); }
   }
 
-  // 登録済み動画一覧を表示
+  // 動画一覧
   async function loadVideoList() {
-    const { data, error } = await sb.from("videos").select("*").order("date", { ascending: false });
+    const { data } = await sb.from("videos").select("*").order("date", { ascending: false });
     const list = document.getElementById("video-list");
-    if (error || !data || data.length === 0) {
-      list.innerHTML = '<div class="empty">まだ動画が登録されていません</div>'; return;
-    }
+    if (!data || data.length === 0) { list.innerHTML = '<div class="empty">まだ動画が登録されていません</div>'; return; }
     list.innerHTML = data.map(v => `
       <div class="video-item">
-        <img class="video-item-thumb"
-             src="https://img.youtube.com/vi/${esc(v.youtube_id)}/mqdefault.jpg"
-             alt="${esc(v.title)}"
-             onerror="this.style.background='#e8eef5'" />
+        <img class="video-item-thumb" src="https://img.youtube.com/vi/${esc(v.youtube_id)}/mqdefault.jpg" alt="${esc(v.title)}" onerror="this.style.background='#e8eef5'" />
         <div class="video-item-info">
           <div class="video-item-title">${esc(v.title)}</div>
           <div class="video-item-date">${fmtDate(v.date)}</div>
         </div>
-        <button class="delete-btn" onclick="deleteVideo('${v.id}', '${esc(v.title)}')">削除</button>
+        <button class="delete-btn" onclick="deleteVideo('${v.id}','${esc(v.title)}')">削除</button>
       </div>
     `).join("");
   }
 
-  // 動画を削除
+  // 動画削除
   async function deleteVideo(id, title) {
     if (!confirm(`「${title}」を削除しますか？`)) return;
     const { error } = await sb.from("videos").delete().eq("id", id);
-    if (error) { alert("削除に失敗しました: " + error.message); }
+    if (error) { alert("削除に失敗しました: "+error.message); }
     else { loadVideoList(); }
   }
 
-  function esc(s) {
-    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-  }
-  function fmtDate(d) {
-    const dt = new Date(d); return `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日`;
+  // 仮パスワード生成（英数字10文字）
+  function generateTempPassword() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    let pw = "";
+    for (let i = 0; i < 10; i++) pw += chars[Math.floor(Math.random() * chars.length)];
+    return pw;
   }
 
-  // 認証チェック
+  // ユーザー発行
+  async function issueUser() {
+    const email = document.getElementById("new-user-email").value.trim();
+    const msg   = document.getElementById("issue-msg");
+    const btn   = document.getElementById("issue-btn");
+    msg.className = "msg"; msg.style.display = "none";
+    document.getElementById("result-box").classList.remove("show");
+
+    if (!email) { msg.className="msg error"; msg.textContent="メールアドレスを入力してください"; return; }
+
+    const tempPw = generateTempPassword();
+    btn.disabled = true; btn.textContent = "発行中...";
+
+    // Supabase Authにユーザー作成（signUp）
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password: tempPw,
+      options: { data: { is_first_login: true } }
+    });
+
+    if (error) {
+      btn.disabled = false; btn.textContent = "アカウントを発行する";
+      msg.className="msg error"; msg.textContent="発行に失敗しました: "+error.message;
+      return;
+    }
+
+    // user_profilesテーブルに追加
+    if (data.user) {
+      await sb.from("user_profiles").upsert({
+        id: data.user.id,
+        email: email,
+        is_first_login: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    }
+
+    btn.disabled = false; btn.textContent = "アカウントを発行する";
+
+    // 結果表示
+    document.getElementById("result-email").textContent = email;
+    document.getElementById("result-pw").textContent = tempPw;
+    document.getElementById("result-box").classList.add("show");
+    document.getElementById("new-user-email").value = "";
+    loadUserList();
+  }
+
+  // コピー
+  function copyResult() {
+    const email = document.getElementById("result-email").textContent;
+    const pw    = document.getElementById("result-pw").textContent;
+    const text  = `【ログイン情報】\nURL: https://sugano-crypto.github.io/video-site/\nメールアドレス: ${email}\n仮パスワード: ${pw}\n※初回ログイン時にパスワードの変更が必要です`;
+    navigator.clipboard.writeText(text).then(() => {
+      const el = document.getElementById("copy-success");
+      el.style.display = "block";
+      setTimeout(() => { el.style.display = "none"; }, 2000);
+    });
+  }
+
+  // ユーザー一覧
+  async function loadUserList() {
+    const { data } = await sb.from("user_profiles").select("*").order("created_at", { ascending: false });
+    const list = document.getElementById("user-list");
+    if (!data || data.length === 0) { list.innerHTML = '<div class="empty">ユーザーがいません</div>'; return; }
+    list.innerHTML = data.map(u => `
+      <div class="user-item">
+        <div class="user-item-info">
+          <div class="user-item-email">${esc(u.email)}</div>
+          <div class="user-item-meta">登録日: ${fmtDate(u.created_at)}</div>
+        </div>
+        <span class="badge ${u.is_first_login ? 'first' : 'done'}">${u.is_first_login ? '初回未完了' : '設定済み'}</span>
+      </div>
+    `).join("");
+  }
+
+  function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function fmtDate(d) { const dt = new Date(d); return `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日`; }
+
+  // 認証チェック（管理者のみ）
   window.addEventListener("DOMContentLoaded", async () => {
     const { data: { session } } = await sb.auth.getSession();
-    if (!session) {
+    if (!session || session.user.email !== ADMIN_EMAIL) {
       document.getElementById("not-auth").style.display = "flex";
     } else {
       document.getElementById("main-content").style.display = "block";
@@ -328,90 +350,6 @@
       loadUserList();
     }
   });
-
-  // ユーザー追加
-  async function addUser() {
-    const email = document.getElementById("new-user-email").value.trim();
-    const pw    = document.getElementById("new-user-pw").value.trim();
-    const msg   = document.getElementById("add-user-msg");
-    const btn   = document.getElementById("add-user-btn");
-    msg.className = "msg"; msg.style.display = "none";
-
-    if (!email) { msg.className="msg error"; msg.textContent="メールアドレスを入力してください"; return; }
-    if (pw.length < 8) { msg.className="msg error"; msg.textContent="パスワードは8文字以上にしてください"; return; }
-
-    btn.disabled = true; btn.textContent = "追加中...";
-
-    // Supabase Admin APIでユーザー作成
-    const SUPABASE_URL = "https://bicqctaxvponqbzjsjbw.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr";
-
-    // signUpを使ってユーザー作成（メール確認なし）
-    const { data, error } = await sb.auth.admin ? 
-      sb.auth.admin.createUser({ email, password: pw, email_confirm: true }) :
-      await createUserViaSignup(email, pw);
-
-    btn.disabled = false; btn.textContent = "ユーザーを追加する";
-
-    if (error) {
-      msg.className = "msg error"; msg.textContent = "追加に失敗しました: " + error.message;
-    } else {
-      document.getElementById("display-email").textContent = email;
-      document.getElementById("display-pw").textContent = pw;
-      document.getElementById("user-link-box").style.display = "block";
-      document.getElementById("new-user-email").value = "";
-      document.getElementById("new-user-pw").value = "";
-      loadUserList();
-    }
-  }
-
-  async function createUserViaSignup(email, password) {
-    const res = await fetch("https://bicqctaxvponqbzjsjbw.supabase.co/auth/v1/admin/users", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": "sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr",
-        "Authorization": "Bearer sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr"
-      },
-      body: JSON.stringify({ email, password, email_confirm: true })
-    });
-    const data = await res.json();
-    if (!res.ok) return { data: null, error: { message: data.message || "作成失敗" } };
-    return { data, error: null };
-  }
-
-  // ログイン情報をコピー
-  function copyLoginInfo() {
-    const email = document.getElementById("display-email").textContent;
-    const pw    = document.getElementById("display-pw").textContent;
-    const text  = `【ログイン情報】\nURL: https://sugano-crypto.github.io/video-site/\nメールアドレス: ${email}\nパスワード: ${pw}`;
-    navigator.clipboard.writeText(text).then(() => {
-      document.getElementById("copy-msg").style.display = "block";
-      setTimeout(() => { document.getElementById("copy-msg").style.display = "none"; }, 2000);
-    });
-  }
-
-  // 登録済みユーザー一覧
-  async function loadUserList() {
-    const res = await fetch("https://bicqctaxvponqbzjsjbw.supabase.co/auth/v1/admin/users", {
-      headers: {
-        "apikey": "sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr",
-        "Authorization": "Bearer sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr"
-      }
-    });
-    const data = await res.json();
-    const list = document.getElementById("user-list");
-    const users = data.users || [];
-    if (users.length === 0) { list.innerHTML = '<div class="empty">ユーザーがいません</div>'; return; }
-    list.innerHTML = users.map(u => `
-      <div class="video-item">
-        <div class="video-item-info">
-          <div class="video-item-title">${esc(u.email)}</div>
-          <div class="video-item-date">登録日: ${fmtDate(u.created_at)}</div>
-        </div>
-      </div>
-    `).join("");
-  }
 </script>
 </body>
 </html>
