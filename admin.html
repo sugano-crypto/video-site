@@ -419,15 +419,46 @@ async function loadUserList() {
   const list = document.getElementById("user-list");
   if (!data || data.length === 0) { list.innerHTML = '<div class="empty">ユーザーがいません</div>'; return; }
   list.innerHTML = data.map(u => `
-    <div class="user-item">
+    <div class="user-item" id="user-item-${u.id}">
       <div class="user-item-info">
         <div class="user-item-email">${esc(u.email)}</div>
         <div class="user-item-meta">登録日: ${fmtDate(u.created_at)}</div>
       </div>
-      ${u.is_restricted ? '<span class="badge restricted">制限ユーザー</span>' : ''}
       <span class="badge ${u.is_first_login ? 'first' : 'done'}">${u.is_first_login ? '初回未完了' : '設定済み'}</span>
+      <button onclick="toggleUserRestrict('${u.id}', ${u.is_restricted})" style="padding:5px 10px; border-radius:6px; border:none; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; background:${u.is_restricted ? '#fde8e8' : '#e8f4fd'}; color:${u.is_restricted ? '#9b2335' : '#2a5298'};">
+        ${u.is_restricted ? '🔓 制限解除' : '🔒 制限ON'}
+      </button>
+      <button onclick="deleteUser('${u.id}', '${esc(u.email)}')" style="padding:5px 10px; border-radius:6px; border:1.5px solid #f5c6c6; background:transparent; color:#c0392b; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer;">削除</button>
     </div>
   `).join("");
+}
+
+async function toggleUserRestrict(userId, currentFlag) {
+  const newFlag = !currentFlag;
+  const { error } = await sb.from("user_profiles").update({ is_restricted: newFlag }).eq("id", userId);
+  if (error) { alert("更新に失敗しました: " + error.message); return; }
+  // 制限ユーザーのIDと一致する場合はボタン表示も更新
+  if (userId === restrictedUserId) updateRestrictBtn(newFlag);
+  loadUserList();
+  loadPermSettings();
+}
+
+async function deleteUser(userId, email) {
+  if (!confirm(`「${email}」を削除しますか？\nこの操作は取り消せません。`)) return;
+  // video_permissions削除 → user_profiles削除 → auth.users削除
+  await sb.from("video_permissions").delete().eq("user_id", userId);
+  await sb.from("user_profiles").delete().eq("id", userId);
+  const { data: { session } } = await sb.auth.getSession();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-user`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify({ userId }),
+  });
+  if (!res.ok) {
+    // Edge Functionがなくてもuser_profilesは削除済みなので一覧からは消える
+  }
+  loadUserList();
+  loadPermSettings();
 }
 
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
