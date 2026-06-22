@@ -445,18 +445,15 @@ async function toggleUserRestrict(userId, currentFlag) {
 
 async function deleteUser(userId, email) {
   if (!confirm(`「${email}」を削除しますか？\nこの操作は取り消せません。`)) return;
-  // video_permissions削除 → user_profiles削除 → auth.users削除
   await sb.from("video_permissions").delete().eq("user_id", userId);
   await sb.from("user_profiles").delete().eq("id", userId);
+  // create-user Edge Functionのdelete機能を利用
   const { data: { session } } = await sb.auth.getSession();
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-user`, {
-    method: 'POST',
+  await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
+    method: 'DELETE',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
     body: JSON.stringify({ userId }),
-  });
-  if (!res.ok) {
-    // Edge Functionがなくてもuser_profilesは削除済みなので一覧からは消える
-  }
+  }).catch(() => {});
   loadUserList();
   loadPermSettings();
 }
