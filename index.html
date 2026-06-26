@@ -266,7 +266,10 @@ async function setupUser(user, profile) {
   document.getElementById("user-email").textContent = user.email;
   updateAdminBtn(user.email);
   if (isRestricted) {
-    const { data: perms } = await sb.from("video_permissions").select("video_id").eq("user_id", user.id);
+    // video@sugacon.net の視聴権限を共有して使用する
+    const { data: restrictedUser } = await sb.from("user_profiles").select("id").eq("email", "video@sugacon.net").single();
+    const targetId = restrictedUser ? restrictedUser.id : user.id;
+    const { data: perms } = await sb.from("video_permissions").select("video_id").eq("user_id", targetId);
     allowedVideoIds = new Set((perms || []).map(p => p.video_id));
   }
   showMain();
