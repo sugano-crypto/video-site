@@ -266,10 +266,9 @@ async function setupUser(user, profile) {
   document.getElementById("user-email").textContent = user.email;
   updateAdminBtn(user.email);
   if (isRestricted) {
-    // video@sugacon.net の視聴権限を共有して使用する
-    const { data: restrictedUser } = await sb.from("user_profiles").select("id").eq("email", "video@sugacon.net").single();
-    const targetId = restrictedUser ? restrictedUser.id : user.id;
-    const { data: perms } = await sb.from("video_permissions").select("video_id").eq("user_id", targetId);
+    // video@sugacon.net の視聴権限を共有して使用する（RLS回避のためIDを直接指定）
+    const RESTRICTED_MASTER_ID = "39b6bc1c-9349-419d-bcb3-e8331571cf55";
+    const { data: perms } = await sb.from("video_permissions").select("video_id").eq("user_id", RESTRICTED_MASTER_ID);
     allowedVideoIds = new Set((perms || []).map(p => p.video_id));
   }
   showMain();
