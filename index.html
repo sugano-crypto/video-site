@@ -183,6 +183,18 @@ body.is-admin .card-delete-btn { display: block; }
   </div>
 </div>
 
+<!-- 視聴制限モーダル -->
+<div id="lock-modal" style="display:none; position:fixed; inset:0; background:rgba(26,58,92,0.4); backdrop-filter:blur(3px); z-index:200; align-items:center; justify-content:center;" onclick="closeLockModal()">
+  <div class="auth-card" style="max-width:380px; text-align:center;" onclick="event.stopPropagation()">
+    <div style="font-size:48px; margin-bottom:16px;">🔒</div>
+    <div class="brand-name" style="margin-bottom:12px;">視聴制限中</div>
+    <p style="font-size:14px; color:#4a6280; line-height:1.8; margin-bottom:24px;">
+      無料面談後に<br>視聴制限が解除されます
+    </p>
+    <span class="text-link" onclick="closeLockModal()">閉じる</span>
+  </div>
+</div>
+
 <!-- パスワード変更モーダル -->
 <div id="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(26,58,92,0.4); backdrop-filter:blur(3px); z-index:200; align-items:center; justify-content:center;">
   <div class="auth-card" style="max-width:380px;">
@@ -302,6 +314,8 @@ function updateAdminBtn(email) {
   if (email === ADMIN_EMAIL) document.body.classList.add("is-admin");
 }
 
+function showLockModal() { document.getElementById("lock-modal").style.display = "flex"; }
+function closeLockModal() { document.getElementById("lock-modal").style.display = "none"; }
 function showChangePassword() {
   document.getElementById("change-newpw").value = "";
   document.getElementById("change-confirm").value = "";
@@ -359,7 +373,7 @@ async function loadVideos() {
     } else {
       return `
         <div class="video-card-wrap">
-          <div class="video-card locked">
+          <div class="video-card locked" onclick="showLockModal()">
             <div class="thumbnail-wrap">
               <img src="https://img.youtube.com/vi/${esc(v.youtube_id)}/hqdefault.jpg" alt="${esc(v.title)}" loading="lazy" />
               <div class="lock-icon">🔒</div>
