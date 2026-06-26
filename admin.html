@@ -72,8 +72,6 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
 .badge.first { background: #fff3cd; color: #856404; }
 .badge.done { background: #d1ecf1; color: #0c5460; }
 .badge.restricted { background: #fde8e8; color: #9b2335; }
-
-/* 制限ユーザー視聴設定 */
 .perm-list { display: flex; flex-direction: column; gap: 10px; }
 .perm-item { display: flex; align-items: center; gap: 14px; background: var(--gray-100); border-radius: 10px; padding: 12px 14px; border: 1px solid var(--gray-200); cursor: pointer; transition: border-color 0.2s; }
 .perm-item:hover { border-color: var(--sky); }
@@ -85,7 +83,6 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
 .save-perm-btn { width: 100%; padding: 13px; background: linear-gradient(135deg, #27ae60, #1e8449); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 16px; transition: opacity 0.2s; }
 .save-perm-btn:hover { opacity: 0.88; }
 .save-perm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
 @media (max-width: 600px) {
 .container { padding: 24px 16px; }
 .card { padding: 24px 20px; }
@@ -169,7 +166,10 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
 
     <!-- ④ ユーザー事前発行 -->
     <div class="page-title" style="margin-bottom:8px;">ユーザーアカウントを発行する</div>
-    <div class="page-sub">メールアドレスを登録すると仮パスワードが自動生成されます。仮パスワードをLINEやメールで本人に送ってください。初回ログイン時にパスワード変更が必須です。</div>
+    <div class="page-sub">
+      メールアドレスを登録すると仮パスワードが自動生成されます。仮パスワードをLINEやメールで本人に送ってください。初回ログイン時にパスワード変更が必須です。<br>
+      <strong style="color:var(--navy);">※新規ユーザーは自動的に「視聴制限あり」で登録されます。制限を解除する場合は下の「登録済みユーザー」から変更してください。</strong>
+    </div>
     <div class="card">
       <div class="form-group">
         <label>メールアドレス</label>
@@ -178,7 +178,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
       <button class="submit-btn" id="issue-btn" onclick="issueUser()">アカウントを発行する</button>
       <div class="msg" id="issue-msg"></div>
       <div class="result-box" id="result-box">
-        <div class="result-title">✅ アカウントを発行しました！</div>
+        <div class="result-title">✅ アカウントを発行しました！（視聴制限あり）</div>
         <div class="result-info">
           <div class="result-label">ログインURL</div>
           <div class="result-value">https://sugano-crypto.github.io/video-site/</div>
@@ -281,7 +281,6 @@ async function deleteVideo(id, title) {
   else { await loadVideoList(); await loadPermSettings(); }
 }
 
-// 制限フラグのON/OFF
 let isRestrictedFlag = false;
 
 function updateRestrictBtn(flag) {
@@ -309,27 +308,20 @@ async function toggleRestriction() {
   updateRestrictBtn(newFlag);
 }
 
-// 制限ユーザーの視聴権限設定
 async function loadPermSettings() {
   const permList = document.getElementById("perm-list");
   if (!restrictedUserId) { permList.innerHTML = '<div class="empty">制限ユーザーが見つかりません</div>'; updateRestrictBtn(false); return; }
-
-  // 制限フラグを取得してボタンに反映
   const { data: profile } = await sb.from("user_profiles").select("is_restricted").eq("id", restrictedUserId).single();
   updateRestrictBtn(profile ? profile.is_restricted : false);
   if (!allVideos.length) { permList.innerHTML = '<div class="empty">動画が登録されていません</div>'; return; }
-
   const { data: perms } = await sb.from("video_permissions").select("video_id").eq("user_id", restrictedUserId);
   const allowedIds = new Set((perms || []).map(p => p.video_id));
-
   permList.innerHTML = allVideos.map(v => {
     const checked = allowedIds.has(v.id);
     return `
       <label class="perm-item ${checked ? 'checked' : ''}" onclick="togglePermItem(this)">
         <img class="perm-thumb" src="https://img.youtube.com/vi/${esc(v.youtube_id)}/mqdefault.jpg" alt="${esc(v.title)}" />
-        <div class="perm-info">
-          <div class="perm-title">${esc(v.title)}</div>
-        </div>
+        <div class="perm-info"><div class="perm-title">${esc(v.title)}</div></div>
         <input type="checkbox" class="perm-check" data-id="${v.id}" ${checked ? 'checked' : ''} onclick="event.stopPropagation()" onchange="this.closest('.perm-item').classList.toggle('checked', this.checked)" />
       </label>`;
   }).join("");
@@ -347,10 +339,7 @@ async function savePermissions() {
   const msg = document.getElementById("perm-msg");
   msg.className = "msg";
   btn.disabled = true; btn.textContent = "保存中...";
-
   const checked = [...document.querySelectorAll('.perm-check:checked')].map(cb => cb.dataset.id);
-
-  // 全削除してから再挿入
   await sb.from("video_permissions").delete().eq("user_id", restrictedUserId);
   if (checked.length > 0) {
     const inserts = checked.map(video_id => ({ user_id: restrictedUserId, video_id }));
@@ -361,7 +350,6 @@ async function savePermissions() {
       return;
     }
   }
-
   btn.disabled = false; btn.textContent = "✅ 設定を保存する";
   msg.className = "msg success"; msg.textContent = `✅ ${checked.length}本の動画を視聴可能に設定しました`;
 }
@@ -391,6 +379,10 @@ async function issueUser() {
     });
     const result = await res.json();
     if (!res.ok) throw new Error(result.error);
+
+    // 新規ユーザーを自動で視聴制限ありに設定
+    await sb.from("user_profiles").update({ is_restricted: true }).eq("email", email);
+
     btn.disabled = false; btn.textContent = "アカウントを発行する";
     document.getElementById("result-email").textContent = email;
     document.getElementById("result-pw").textContent = tempPw;
@@ -437,7 +429,6 @@ async function toggleUserRestrict(userId, currentFlag) {
   const newFlag = !currentFlag;
   const { error } = await sb.from("user_profiles").update({ is_restricted: newFlag }).eq("id", userId);
   if (error) { alert("更新に失敗しました: " + error.message); return; }
-  // 制限ユーザーのIDと一致する場合はボタン表示も更新
   if (userId === restrictedUserId) updateRestrictBtn(newFlag);
   loadUserList();
   loadPermSettings();
@@ -447,7 +438,6 @@ async function deleteUser(userId, email) {
   if (!confirm(`「${email}」を削除しますか？\nこの操作は取り消せません。`)) return;
   await sb.from("video_permissions").delete().eq("user_id", userId);
   await sb.from("user_profiles").delete().eq("id", userId);
-  // create-user Edge Functionのdelete機能を利用
   const { data: { session } } = await sb.auth.getSession();
   await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
     method: 'DELETE',
@@ -467,7 +457,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("not-auth").style.display = "flex";
   } else {
     document.getElementById("main-content").style.display = "block";
-    // 制限ユーザーのIDを取得
     const { data: rUser } = await sb.from("user_profiles").select("id").eq("email", RESTRICTED_EMAIL).single();
     if (rUser) restrictedUserId = rUser.id;
     await loadVideoList();
