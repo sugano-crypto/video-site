@@ -1,9 +1,10 @@
+```
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>すがコンサルティング＆パートナーズ｜会員限定動画</title>
+<title>すがコンサルティング＆パートナーズ｜会員サイト</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
@@ -77,6 +78,12 @@ body.is-admin .card-delete-btn { display: block; }
 .contact-note { font-size: 12px; color: var(--gray-400); text-align: center; margin-top: 12px; line-height: 1.7; }
 .contact-note a { color: var(--sky); text-decoration: none; }
 .contact-note a:hover { text-decoration: underline; }
+
+.contract-badge { display:none; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; }
+.contract-badge.active { display:inline-flex; background:#e9f7ef; color:#237a45; border:1px solid #c9ead6; }
+.contract-badge.paused { display:inline-flex; background:#fff6df; color:#8a6418; border:1px solid #f1dfae; }
+.contract-badge.ended { display:inline-flex; background:#f5eaea; color:#a33a32; border:1px solid #ecc9c6; }
+
 @media (max-width: 600px) {
 .video-grid { grid-template-columns: 1fr; gap: 14px; }
 .auth-card { padding: 36px 24px 32px; }
@@ -93,7 +100,7 @@ body.is-admin .card-delete-btn { display: block; }
     <div class="brand">
       <img src="logo.png" alt="ロゴ" />
       <div class="brand-name">すがコンサルティング＆パートナーズ</div>
-      <div class="brand-sub">会員限定動画ポータル</div>
+      <div class="brand-sub">会員サイト</div>
     </div>
     <div class="form-group">
       <label>メールアドレス</label>
@@ -163,10 +170,11 @@ body.is-admin .card-delete-btn { display: block; }
       <img src="logo.png" alt="ロゴ" class="header-logo" />
       <div class="header-title">
         すがコンサルティング＆パートナーズ
-        <span>会員限定動画ポータル</span>
+        <span>会員サイト</span>
       </div>
     </div>
     <div class="header-right">
+      <span class="contract-badge" id="contract-badge"></span>
       <span class="user-email" id="user-email"></span>
       <button class="header-btn admin" id="admin-btn" onclick="location.href='admin.html'" style="display:none;">＋ 動画登録</button>
       <button class="header-btn" onclick="showChangePassword()">パスワード変更</button>
@@ -189,7 +197,7 @@ body.is-admin .card-delete-btn { display: block; }
     <div style="font-size:48px; margin-bottom:16px;">🔒</div>
     <div class="brand-name" style="margin-bottom:12px;">視聴制限中</div>
     <p style="font-size:14px; color:#4a6280; line-height:1.8; margin-bottom:24px;">
-      無料面談後に<br>視聴制限が解除されます
+      現在、このコンテンツは視聴できません。<br>契約状況または視聴権限をご確認ください
     </p>
     <span class="text-link" onclick="closeLockModal()">閉じる</span>
   </div>
@@ -246,7 +254,7 @@ async function doLogin() {
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
   btn.disabled = false; btn.textContent = "ログイン";
   if (error) { msg.textContent = "メールアドレスまたはパスワードが正しくありません"; return; }
-  const { data: profile } = await sb.from("user_profiles").select("is_first_login, is_restricted").eq("id", data.user.id).single();
+  const { data: profile } = await sb.from("user_profiles").select("is_first_login, is_restricted, user_type, plan_type, contract_status, contract_start_date, contract_end_date").eq("id", data.user.id).single();
   if (profile && profile.is_first_login) {
     showScreen("firstpw-screen");
   } else {
@@ -274,7 +282,21 @@ async function doResetPassword() {
 
 async function setupUser(user, profile) {
   currentUser = user;
-  isRestricted = profile && profile.is_restricted;
+
+  // 管理者は契約状態に関係なく管理可能
+  const isAdmin = user.email === ADMIN_EMAIL;
+  const contractStatus = profile?.contract_status || "契約中";
+
+  // 契約状態をヘッダーに表示
+  updateContractBadge(contractStatus, isAdmin);
+
+  // 停止・契約終了は管理者以外を視聴制限
+  isRestricted = !isAdmin && (
+    (profile && profile.is_restricted) ||
+    contractStatus === "停止" ||
+    contractStatus === "契約終了"
+  );
+
   document.getElementById("user-email").textContent = user.email;
   updateAdminBtn(user.email);
   if (isRestricted) {
@@ -301,9 +323,9 @@ async function doFirstPasswordChange() {
   const { data: { user } } = await sb.auth.getUser();
   await sb.from("user_profiles").update({ is_first_login: false, updated_at: new Date().toISOString() }).eq("id", user.id);
   btn.disabled = false; btn.textContent = "パスワードを設定する";
-  msg.className="msg success"; msg.textContent="設定しました！動画ページに移動します...";
+  msg.className="msg success"; msg.textContent="設定しました！会員サイトに移動します...";
   setTimeout(async () => {
-    const { data: profile } = await sb.from("user_profiles").select("is_first_login, is_restricted").eq("id", user.id).single();
+    const { data: profile } = await sb.from("user_profiles").select("is_first_login, is_restricted, user_type, plan_type, contract_status, contract_start_date, contract_end_date").eq("id", user.id).single();
     await setupUser(user, profile);
   }, 1500);
 }
@@ -312,6 +334,26 @@ function updateAdminBtn(email) {
   const btn = document.getElementById("admin-btn");
   if (btn) btn.style.display = (email === ADMIN_EMAIL) ? "inline-block" : "none";
   if (email === ADMIN_EMAIL) document.body.classList.add("is-admin");
+}
+
+function updateContractBadge(status, isAdmin) {
+  const badge = document.getElementById("contract-badge");
+  if (!badge) return;
+
+  if (isAdmin) {
+    badge.textContent = "管理者";
+    badge.className = "contract-badge active";
+    return;
+  }
+
+  badge.textContent = status || "契約中";
+  if (status === "停止") {
+    badge.className = "contract-badge paused";
+  } else if (status === "契約終了") {
+    badge.className = "contract-badge ended";
+  } else {
+    badge.className = "contract-badge active";
+  }
 }
 
 function showLockModal() { document.getElementById("lock-modal").style.display = "flex"; }
@@ -396,7 +438,7 @@ function fmtDate(d) { const dt = new Date(d); return `${dt.getFullYear()}年${dt
 window.addEventListener("DOMContentLoaded", async () => {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { showScreen("login-screen"); return; }
-  const { data: profile } = await sb.from("user_profiles").select("is_first_login, is_restricted").eq("id", session.user.id).single();
+  const { data: profile } = await sb.from("user_profiles").select("is_first_login, is_restricted, user_type, plan_type, contract_status, contract_start_date, contract_end_date").eq("id", session.user.id).single();
   if (profile && profile.is_first_login) { showScreen("firstpw-screen"); return; }
   await setupUser(session.user, profile);
 });
