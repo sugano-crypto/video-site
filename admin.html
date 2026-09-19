@@ -190,17 +190,26 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
     <div class="page-title" style="margin-bottom:8px;">ユーザーアカウントを発行する</div>
     <div class="page-sub">
       メールアドレスを登録すると仮パスワードが自動生成されます。仮パスワードをLINEやメールで本人に送ってください。初回ログイン時にパスワード変更が必須です。<br>
-      <strong style="color:var(--navy);">※新規ユーザーは自動的に「視聴制限あり」で登録されます。制限を解除する場合は下の「登録済みユーザー」から変更してください。</strong>
+      <strong style="color:var(--navy);">※登録ステータスに応じて、会員区分・契約状況・動画視聴制限を自動設定します。</strong>
     </div>
     <div class="card">
       <div class="form-group">
         <label>メールアドレス</label>
         <input type="email" id="new-user-email" placeholder="example@email.com" />
       </div>
+      <div class="form-group">
+        <label>登録ステータス</label>
+        <select id="new-user-status" style="width:100%; padding:12px 14px; background:var(--gray-100); border:1.5px solid var(--gray-200); border-radius:8px; color:var(--text); font-size:14px; font-family:inherit;">
+          <option value="pre_doctor">LINE特典・契約前医師</option>
+          <option value="contract_doctor">契約済み医師</option>
+          <option value="contract_staff">契約済み事務</option>
+        </select>
+        <div class="hint">登録後も下の「会員管理」から会員区分・契約状況・視聴制限を変更できます。</div>
+      </div>
       <button class="submit-btn" id="issue-btn" onclick="issueUser()">アカウントを発行する</button>
       <div class="msg" id="issue-msg"></div>
       <div class="result-box" id="result-box">
-        <div class="result-title">✅ アカウントを発行しました！（視聴制限あり）</div>
+        <div class="result-title" id="result-title">✅ アカウントを発行しました！</div>
         <div class="result-info">
           <div class="result-label">ログインURL</div>
           <div class="result-value">https://sugano-crypto.github.io/video-site/</div>
@@ -238,6 +247,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
           </select>
           <select id="filter-contract-status" onchange="applyMemberFilters()">
             <option value="">契約状況：すべて</option>
+            <option value="契約前">契約前</option>
             <option value="契約中">契約中</option>
             <option value="停止">停止</option>
             <option value="契約終了">契約終了</option>
@@ -436,10 +446,47 @@ async function issueUser() {
     const result = await res.json();
     if (!res.ok) throw new Error(result.error);
 
-    // 新規ユーザーを自動で視聴制限ありに設定
-    await sb.from("user_profiles").update({ is_restricted: true }).eq("email", email);
+    // 選択した登録ステータスに応じて初期値を設定
+    const registrationStatus = document.getElementById("new-user-status").value;
+    let initialProfile;
+
+    if (registrationStatus === "contract_doctor") {
+      initialProfile = {
+        user_type: "医師",
+        plan_type: "一般",
+        contract_status: "契約中",
+        is_restricted: false
+      };
+    } else if (registrationStatus === "contract_staff") {
+      initialProfile = {
+        user_type: "事務",
+        plan_type: "一般",
+        contract_status: "契約中",
+        is_restricted: false
+      };
+    } else {
+      initialProfile = {
+        user_type: "医師",
+        plan_type: "一般",
+        contract_status: "契約前",
+        is_restricted: true
+      };
+    }
+
+    const { error: profileError } = await sb
+      .from("user_profiles")
+      .update(initialProfile)
+      .eq("email", email);
+
+    if (profileError) throw new Error("会員情報の初期設定に失敗しました: " + profileError.message);
+
+    const statusLabel =
+      registrationStatus === "contract_doctor" ? "契約済み医師" :
+      registrationStatus === "contract_staff" ? "契約済み事務" :
+      "LINE特典・契約前医師";
 
     btn.disabled = false; btn.textContent = "アカウントを発行する";
+    document.getElementById("result-title").textContent = `✅ ${statusLabel}としてアカウントを発行しました！`;
     document.getElementById("result-email").textContent = email;
     document.getElementById("result-pw").textContent = tempPw;
     document.getElementById("result-box").classList.add("show");
@@ -540,7 +587,7 @@ function renderUserList(data) {
           <div class="member-field">
             <label>契約状況</label>
             <select id="contract-status-${uid}">
-              ${optionHtml(["契約中","停止","契約終了"], contractStatus)}
+              ${optionHtml(["契約前","契約中","停止","契約終了"], contractStatus)}
             </select>
           </div>
           <div class="member-field">
