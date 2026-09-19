@@ -83,10 +83,22 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
 .save-perm-btn { width: 100%; padding: 13px; background: linear-gradient(135deg, #27ae60, #1e8449); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 16px; transition: opacity 0.2s; }
 .save-perm-btn:hover { opacity: 0.88; }
 .save-perm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.member-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:12px; }
+.member-field label { display:block; font-size:10px; color:var(--gray-400); margin-bottom:4px; }
+.member-field select, .member-field input { width:100%; padding:8px 9px; border:1px solid var(--gray-200); border-radius:7px; background:white; color:var(--text); font-family:inherit; font-size:12px; }
+.member-actions { display:flex; gap:8px; margin-top:12px; }
+.member-save-btn { flex:1; padding:9px 12px; border:none; border-radius:7px; background:var(--navy); color:white; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.member-delete-btn { padding:9px 12px; border:1.5px solid #f5c6c6; border-radius:7px; background:transparent; color:#c0392b; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.member-status { margin-top:8px; font-size:11px; display:none; }
+.member-status.ok { display:block; color:#27ae60; }
+.member-status.err { display:block; color:#c0392b; }
+
 @media (max-width: 600px) {
 .container { padding: 24px 16px; }
 .card { padding: 24px 20px; }
 .header { padding: 0 16px; }
+.member-grid { grid-template-columns:1fr; }
 }
 </style>
 </head>
@@ -192,8 +204,9 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
       </div>
     </div>
 
-    <!-- ⑤ 登録済みユーザー一覧 -->
-    <div class="page-title" style="margin-bottom:16px;">登録済みユーザー</div>
+    <!-- ⑤ 会員管理 -->
+    <div class="page-title" style="margin-bottom:8px;">会員管理</div>
+    <div class="page-sub">会員区分・プラン・契約状況・契約期間をユーザーごとに変更できます。</div>
     <div class="card">
       <div id="user-list"><div class="empty">読み込み中...</div></div>
     </div>
@@ -407,23 +420,112 @@ function copyResult() {
 }
 
 async function loadUserList() {
-  const { data } = await sb.from("user_profiles").select("*").order("created_at", { ascending: false });
+  const { data, error } = await sb.from("user_profiles").select("*").order("created_at", { ascending: false });
   const list = document.getElementById("user-list");
+  if (error) { list.innerHTML = `<div class="empty">読み込みに失敗しました: ${esc(error.message)}</div>`; return; }
   if (!data || data.length === 0) { list.innerHTML = '<div class="empty">ユーザーがいません</div>'; return; }
-  list.innerHTML = data.map(u => `
-    <div class="user-item" id="user-item-${u.id}">
-      <div class="user-item-info">
-        <div class="user-item-email">${esc(u.email)}</div>
-        <div class="user-item-meta">登録日: ${fmtDate(u.created_at)}</div>
-      </div>
-      <span class="badge ${u.is_first_login ? 'first' : 'done'}">${u.is_first_login ? '初回未完了' : '設定済み'}</span>
-      <button onclick="toggleUserRestrict('${u.id}', ${u.is_restricted})" style="padding:5px 10px; border-radius:6px; border:none; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; background:${u.is_restricted ? '#fde8e8' : '#e8f4fd'}; color:${u.is_restricted ? '#9b2335' : '#2a5298'};">
-        ${u.is_restricted ? '🔓 制限解除' : '🔒 制限ON'}
-      </button>
-      <button onclick="deleteUser('${u.id}', '${esc(u.email)}')" style="padding:5px 10px; border-radius:6px; border:1.5px solid #f5c6c6; background:transparent; color:#c0392b; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer;">削除</button>
-    </div>
-  `).join("");
+
+  list.innerHTML = data.map(u => {
+    const uid = esc(u.id);
+    const userType = u.user_type || "事務";
+    const planType = u.plan_type || "一般";
+    const contractStatus = u.contract_status || "契約中";
+    const startDate = u.contract_start_date ? String(u.contract_start_date).slice(0,10) : "";
+    const endDate = u.contract_end_date ? String(u.contract_end_date).slice(0,10) : "";
+
+    return `
+      <div class="user-item" id="user-item-${uid}" style="display:block;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="user-item-info">
+            <div class="user-item-email">${esc(u.email)}</div>
+            <div class="user-item-meta">登録日: ${fmtDate(u.created_at)}</div>
+          </div>
+          <span class="badge ${u.is_first_login ? 'first' : 'done'}">${u.is_first_login ? '初回未完了' : '設定済み'}</span>
+          ${u.is_restricted ? '<span class="badge restricted">視聴制限あり</span>' : ''}
+        </div>
+
+        <div class="member-grid">
+          <div class="member-field">
+            <label>会員区分</label>
+            <select id="user-type-${uid}">
+              ${optionHtml(["医師","事務"], userType)}
+            </select>
+          </div>
+          <div class="member-field">
+            <label>プラン</label>
+            <select id="plan-type-${uid}">
+              ${optionHtml(["一般","スターター","スタンダード","プレミアム","開業支援"], planType)}
+            </select>
+          </div>
+          <div class="member-field">
+            <label>契約状況</label>
+            <select id="contract-status-${uid}">
+              ${optionHtml(["契約中","停止","契約終了"], contractStatus)}
+            </select>
+          </div>
+          <div class="member-field">
+            <label>視聴制限</label>
+            <select id="restricted-${uid}">
+              <option value="false" ${!u.is_restricted ? "selected" : ""}>制限なし</option>
+              <option value="true" ${u.is_restricted ? "selected" : ""}>制限あり</option>
+            </select>
+          </div>
+          <div class="member-field">
+            <label>契約開始日</label>
+            <input type="date" id="contract-start-${uid}" value="${esc(startDate)}">
+          </div>
+          <div class="member-field">
+            <label>契約終了日</label>
+            <input type="date" id="contract-end-${uid}" value="${esc(endDate)}">
+          </div>
+        </div>
+
+        <div class="member-actions">
+          <button class="member-save-btn" onclick="saveUserProfile('${uid}')">保存</button>
+          <button class="member-delete-btn" onclick="deleteUser('${uid}', '${esc(u.email)}')">削除</button>
+        </div>
+        <div class="member-status" id="member-status-${uid}"></div>
+      </div>`;
+  }).join("");
 }
+
+function optionHtml(options, current) {
+  const values = current && !options.includes(current) ? [current, ...options] : options;
+  return values.map(v => `<option value="${esc(v)}" ${v === current ? "selected" : ""}>${esc(v)}</option>`).join("");
+}
+
+async function saveUserProfile(userId) {
+  const statusEl = document.getElementById(`member-status-${userId}`);
+  statusEl.className = "member-status";
+  statusEl.textContent = "保存中...";
+
+  const startDate = document.getElementById(`contract-start-${userId}`).value || null;
+  const endDate = document.getElementById(`contract-end-${userId}`).value || null;
+  const isRestricted = document.getElementById(`restricted-${userId}`).value === "true";
+
+  const updates = {
+    user_type: document.getElementById(`user-type-${userId}`).value,
+    plan_type: document.getElementById(`plan-type-${userId}`).value,
+    contract_status: document.getElementById(`contract-status-${userId}`).value,
+    contract_start_date: startDate,
+    contract_end_date: endDate,
+    is_restricted: isRestricted,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await sb.from("user_profiles").update(updates).eq("id", userId);
+  if (error) {
+    statusEl.className = "member-status err";
+    statusEl.textContent = "保存に失敗しました: " + error.message;
+    return;
+  }
+
+  if (userId === restrictedUserId) updateRestrictBtn(isRestricted);
+  statusEl.className = "member-status ok";
+  statusEl.textContent = "✅ 保存しました";
+  setTimeout(() => { statusEl.className = "member-status"; statusEl.textContent = ""; }, 2500);
+}
+
 
 async function toggleUserRestrict(userId, currentFlag) {
   const newFlag = !currentFlag;
