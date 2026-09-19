@@ -94,11 +94,21 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
 .member-status.ok { display:block; color:#27ae60; }
 .member-status.err { display:block; color:#c0392b; }
 
+
+.member-tools { margin-bottom:18px; padding:16px; background:var(--gray-100); border:1px solid var(--gray-200); border-radius:10px; }
+.member-search { margin-bottom:10px; }
+.member-search input { width:100%; padding:11px 12px; border:1.5px solid var(--gray-200); border-radius:8px; background:white; color:var(--text); font-family:inherit; font-size:13px; outline:none; }
+.member-search input:focus { border-color:var(--sky); box-shadow:0 0 0 3px rgba(74,144,217,0.12); }
+.member-filters { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.member-filters select { width:100%; padding:9px 8px; border:1px solid var(--gray-200); border-radius:7px; background:white; color:var(--text); font-family:inherit; font-size:11px; }
+.member-count { margin-top:10px; font-size:11px; color:var(--gray-600); text-align:right; }
+
 @media (max-width: 600px) {
 .container { padding: 24px 16px; }
 .card { padding: 24px 20px; }
 .header { padding: 0 16px; }
 .member-grid { grid-template-columns:1fr; }
+.member-filters { grid-template-columns:1fr 1fr; }
 }
 </style>
 </head>
@@ -208,6 +218,38 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
     <div class="page-title" style="margin-bottom:8px;">会員管理</div>
     <div class="page-sub">会員区分・プラン・契約状況・契約期間をユーザーごとに変更できます。</div>
     <div class="card">
+      <div class="member-tools">
+        <div class="member-search">
+          <input type="search" id="member-search" placeholder="メールアドレスで検索" oninput="applyMemberFilters()" />
+        </div>
+        <div class="member-filters">
+          <select id="filter-user-type" onchange="applyMemberFilters()">
+            <option value="">会員区分：すべて</option>
+            <option value="医師">医師</option>
+            <option value="事務">事務</option>
+          </select>
+          <select id="filter-plan-type" onchange="applyMemberFilters()">
+            <option value="">プラン：すべて</option>
+            <option value="一般">一般</option>
+            <option value="スターター">スターター</option>
+            <option value="スタンダード">スタンダード</option>
+            <option value="プレミアム">プレミアム</option>
+            <option value="開業支援">開業支援</option>
+          </select>
+          <select id="filter-contract-status" onchange="applyMemberFilters()">
+            <option value="">契約状況：すべて</option>
+            <option value="契約中">契約中</option>
+            <option value="停止">停止</option>
+            <option value="契約終了">契約終了</option>
+          </select>
+          <select id="filter-restricted" onchange="applyMemberFilters()">
+            <option value="">視聴制限：すべて</option>
+            <option value="true">制限あり</option>
+            <option value="false">制限なし</option>
+          </select>
+        </div>
+        <div class="member-count" id="member-count">読み込み中...</div>
+      </div>
       <div id="user-list"><div class="empty">読み込み中...</div></div>
     </div>
 
@@ -224,6 +266,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let restrictedUserId = null;
 let allVideos = [];
+let allUsers = [];
 
 document.getElementById("vid-date").value = new Date().toISOString().split("T")[0];
 
@@ -422,8 +465,45 @@ function copyResult() {
 async function loadUserList() {
   const { data, error } = await sb.from("user_profiles").select("*").order("created_at", { ascending: false });
   const list = document.getElementById("user-list");
-  if (error) { list.innerHTML = `<div class="empty">読み込みに失敗しました: ${esc(error.message)}</div>`; return; }
-  if (!data || data.length === 0) { list.innerHTML = '<div class="empty">ユーザーがいません</div>'; return; }
+  if (error) {
+    allUsers = [];
+    list.innerHTML = `<div class="empty">読み込みに失敗しました: ${esc(error.message)}</div>`;
+    document.getElementById("member-count").textContent = "全0名／表示0名";
+    return;
+  }
+  allUsers = data || [];
+  applyMemberFilters();
+}
+
+function applyMemberFilters() {
+  const keyword = (document.getElementById("member-search")?.value || "").trim().toLowerCase();
+  const userType = document.getElementById("filter-user-type")?.value || "";
+  const planType = document.getElementById("filter-plan-type")?.value || "";
+  const contractStatus = document.getElementById("filter-contract-status")?.value || "";
+  const restricted = document.getElementById("filter-restricted")?.value || "";
+
+  const filtered = allUsers.filter(u => {
+    const currentUserType = u.user_type || "事務";
+    const currentPlanType = u.plan_type || "一般";
+    const currentContractStatus = u.contract_status || "契約中";
+    const emailMatch = !keyword || String(u.email || "").toLowerCase().includes(keyword);
+    const userTypeMatch = !userType || currentUserType === userType;
+    const planMatch = !planType || currentPlanType === planType;
+    const contractMatch = !contractStatus || currentContractStatus === contractStatus;
+    const restrictedMatch = restricted === "" || String(!!u.is_restricted) === restricted;
+    return emailMatch && userTypeMatch && planMatch && contractMatch && restrictedMatch;
+  });
+
+  renderUserList(filtered);
+  document.getElementById("member-count").textContent = `全${allUsers.length}名／表示${filtered.length}名`;
+}
+
+function renderUserList(data) {
+  const list = document.getElementById("user-list");
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div class="empty">該当するユーザーがいません</div>';
+    return;
+  }
 
   list.innerHTML = data.map(u => {
     const uid = esc(u.id);
