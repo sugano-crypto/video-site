@@ -433,18 +433,26 @@ async function issueUser() {
   const btn = document.getElementById("issue-btn");
   msg.className = "msg"; msg.style.display = "none";
   document.getElementById("result-box").classList.remove("show");
-  if (!email) { msg.className="msg error"; msg.textContent="メールアドレスを入力してください"; return; }
+  if (!email) { msg.className="msg error"; msg.style.display="block"; msg.textContent="メールアドレスを入力してください"; return; }
   const tempPw = generateTempPassword();
   btn.disabled = true; btn.textContent = "発行中...";
   try {
     const { data: { session } } = await sb.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error("管理者のログインセッションが確認できません。いったんログインし直してください。");
+    }
+
     const res = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
       body: JSON.stringify({ email, password: tempPw }),
     });
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.error);
+    const responseText = await res.text();
+    let result = {};
+    try { result = responseText ? JSON.parse(responseText) : {}; } catch (_) {}
+    if (!res.ok) {
+      throw new Error(result.error || result.message || responseText || `アカウント発行に失敗しました（HTTP ${res.status}）`);
+    }
 
     // 選択した登録ステータスに応じて初期値を設定
     const registrationStatus = document.getElementById("new-user-status").value;
@@ -486,6 +494,7 @@ async function issueUser() {
       "LINE特典・契約前医師";
 
     btn.disabled = false; btn.textContent = "アカウントを発行する";
+    msg.style.display = "none";
     document.getElementById("result-title").textContent = `✅ ${statusLabel}としてアカウントを発行しました！`;
     document.getElementById("result-email").textContent = email;
     document.getElementById("result-pw").textContent = tempPw;
@@ -494,7 +503,10 @@ async function issueUser() {
     loadUserList();
   } catch(e) {
     btn.disabled = false; btn.textContent = "アカウントを発行する";
-    msg.className="msg error"; msg.textContent="エラー: "+e.message;
+    msg.className="msg error";
+    msg.style.display="block";
+    msg.textContent="エラー: " + (e?.message || String(e));
+    console.error("issueUser error:", e);
   }
 }
 
