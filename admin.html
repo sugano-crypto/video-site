@@ -4,7 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>管理画面｜すがコンサルティング＆パートナーズ</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(() => { if (document.getElementById("article-admin-list")) loadAdminArticles(); }, 300);
+});
+
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -94,21 +99,11 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
 .member-status.ok { display:block; color:#27ae60; }
 .member-status.err { display:block; color:#c0392b; }
 
-
-.member-tools { margin-bottom:18px; padding:16px; background:var(--gray-100); border:1px solid var(--gray-200); border-radius:10px; }
-.member-search { margin-bottom:10px; }
-.member-search input { width:100%; padding:11px 12px; border:1.5px solid var(--gray-200); border-radius:8px; background:white; color:var(--text); font-family:inherit; font-size:13px; outline:none; }
-.member-search input:focus { border-color:var(--sky); box-shadow:0 0 0 3px rgba(74,144,217,0.12); }
-.member-filters { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
-.member-filters select { width:100%; padding:9px 8px; border:1px solid var(--gray-200); border-radius:7px; background:white; color:var(--text); font-family:inherit; font-size:11px; }
-.member-count { margin-top:10px; font-size:11px; color:var(--gray-600); text-align:right; }
-
 @media (max-width: 600px) {
 .container { padding: 24px 16px; }
 .card { padding: 24px 20px; }
 .header { padding: 0 16px; }
 .member-grid { grid-template-columns:1fr; }
-.member-filters { grid-template-columns:1fr 1fr; }
 }
 </style>
 </head>
@@ -170,7 +165,26 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
       <div class="video-list" id="video-list"><div class="empty">読み込み中...</div></div>
     </div>
 
-    <!-- ③ 制限ユーザーの視聴設定 -->
+
+    <!-- ③ 記事管理（Notion → Supabase 同期記事） -->
+    <div class="page-title" style="margin-bottom:8px;">記事管理</div>
+    <div class="page-sub">
+      記事本文はNotionで管理します。ここではSupabaseに同期された記事の公開状況を確認します。
+    </div>
+    <div class="card">
+      <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:16px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="header-btn admin" onclick="setArticleAdminFilter('all',this)">すべて</button>
+          <button class="header-btn" onclick="setArticleAdminFilter('doctor',this)">医師向け</button>
+          <button class="header-btn" onclick="setArticleAdminFilter('staff',this)">事務向け</button>
+        </div>
+        <button class="header-btn" onclick="loadAdminArticles()">↻ 再読み込み</button>
+      </div>
+      <div id="article-admin-count" style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">読み込み中...</div>
+      <div class="video-list" id="article-admin-list"><div class="empty">読み込み中...</div></div>
+    </div>
+
+    <!-- ④ 制限ユーザーの視聴設定 -->
     <div class="page-title" style="margin-bottom:8px;">制限ユーザーの視聴設定</div>
     <div class="page-sub">チェックした動画だけ <strong>video@sugacon.net</strong> が視聴できます</div>
     <div class="card">
@@ -186,30 +200,21 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
       <div class="msg" id="perm-msg"></div>
     </div>
 
-    <!-- ④ ユーザー事前発行 -->
+    <!-- ⑤ ユーザー事前発行 -->
     <div class="page-title" style="margin-bottom:8px;">ユーザーアカウントを発行する</div>
     <div class="page-sub">
       メールアドレスを登録すると仮パスワードが自動生成されます。仮パスワードをLINEやメールで本人に送ってください。初回ログイン時にパスワード変更が必須です。<br>
-      <strong style="color:var(--navy);">※登録ステータスに応じて、会員区分・契約状況・動画視聴制限を自動設定します。</strong>
+      <strong style="color:var(--navy);">※新規ユーザーは自動的に「視聴制限あり」で登録されます。制限を解除する場合は下の「登録済みユーザー」から変更してください。</strong>
     </div>
     <div class="card">
       <div class="form-group">
         <label>メールアドレス</label>
         <input type="email" id="new-user-email" placeholder="example@email.com" />
       </div>
-      <div class="form-group">
-        <label>登録ステータス</label>
-        <select id="new-user-status" style="width:100%; padding:12px 14px; background:var(--gray-100); border:1.5px solid var(--gray-200); border-radius:8px; color:var(--text); font-size:14px; font-family:inherit;">
-          <option value="pre_doctor">LINE特典・契約前医師</option>
-          <option value="contract_doctor">契約済み医師</option>
-          <option value="contract_staff">契約済み事務</option>
-        </select>
-        <div class="hint">登録後も下の「会員管理」から会員区分・契約状況・視聴制限を変更できます。</div>
-      </div>
       <button class="submit-btn" id="issue-btn" onclick="issueUser()">アカウントを発行する</button>
       <div class="msg" id="issue-msg"></div>
       <div class="result-box" id="result-box">
-        <div class="result-title" id="result-title">✅ アカウントを発行しました！</div>
+        <div class="result-title">✅ アカウントを発行しました！（視聴制限あり）</div>
         <div class="result-info">
           <div class="result-label">ログインURL</div>
           <div class="result-value">https://sugano-crypto.github.io/video-site/</div>
@@ -223,43 +228,10 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
       </div>
     </div>
 
-    <!-- ⑤ 会員管理 -->
+    <!-- ⑥ 会員管理 -->
     <div class="page-title" style="margin-bottom:8px;">会員管理</div>
     <div class="page-sub">会員区分・プラン・契約状況・契約期間をユーザーごとに変更できます。</div>
     <div class="card">
-      <div class="member-tools">
-        <div class="member-search">
-          <input type="search" id="member-search" placeholder="メールアドレスで検索" oninput="applyMemberFilters()" />
-        </div>
-        <div class="member-filters">
-          <select id="filter-user-type" onchange="applyMemberFilters()">
-            <option value="">会員区分：すべて</option>
-            <option value="医師">医師</option>
-            <option value="事務">事務</option>
-          </select>
-          <select id="filter-plan-type" onchange="applyMemberFilters()">
-            <option value="">プラン：すべて</option>
-            <option value="一般">一般</option>
-            <option value="スターター">スターター</option>
-            <option value="スタンダード">スタンダード</option>
-            <option value="プレミアム">プレミアム</option>
-            <option value="開業支援">開業支援</option>
-          </select>
-          <select id="filter-contract-status" onchange="applyMemberFilters()">
-            <option value="">契約状況：すべて</option>
-            <option value="契約前">契約前</option>
-            <option value="契約中">契約中</option>
-            <option value="停止">停止</option>
-            <option value="契約終了">契約終了</option>
-          </select>
-          <select id="filter-restricted" onchange="applyMemberFilters()">
-            <option value="">視聴制限：すべて</option>
-            <option value="true">制限あり</option>
-            <option value="false">制限なし</option>
-          </select>
-        </div>
-        <div class="member-count" id="member-count">読み込み中...</div>
-      </div>
       <div id="user-list"><div class="empty">読み込み中...</div></div>
     </div>
 
@@ -276,9 +248,80 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let restrictedUserId = null;
 let allVideos = [];
-let allUsers = [];
 
 document.getElementById("vid-date").value = new Date().toISOString().split("T")[0];
+
+
+let adminArticles = [];
+let articleAdminFilter = "all";
+
+function normalizeAdminAudience(v) {
+  const s = String(v || "").trim().toLowerCase();
+  if (["医師","医師向け","doctor","doctors"].includes(s)) return "doctor";
+  if (["事務","事務向け","staff","office","admin"].includes(s)) return "staff";
+  if (["全員","共通","all","both"].includes(s)) return "all";
+  return s || "all";
+}
+
+async function loadAdminArticles() {
+  const list = document.getElementById("article-admin-list");
+  const count = document.getElementById("article-admin-count");
+  if (!list || !count) return;
+
+  const { data, error } = await sb
+    .from("articles")
+    .select("*")
+    .order("published_at", { ascending:false });
+
+  if (error) {
+    console.error("articles load error:", error);
+    count.textContent = "記事を取得できませんでした";
+    list.innerHTML = `<div class="empty">記事データの読み込みに失敗しました：${esc(error.message)}</div>`;
+    return;
+  }
+  adminArticles = data || [];
+  renderAdminArticles();
+}
+
+function setArticleAdminFilter(filter, btn) {
+  articleAdminFilter = filter;
+  const wrap = btn?.parentElement;
+  if (wrap) wrap.querySelectorAll("button").forEach(b => b.classList.remove("admin"));
+  btn?.classList.add("admin");
+  renderAdminArticles();
+}
+
+function renderAdminArticles() {
+  const list = document.getElementById("article-admin-list");
+  const count = document.getElementById("article-admin-count");
+  if (!list || !count) return;
+
+  const rows = adminArticles.filter(a => {
+    const aud = normalizeAdminAudience(a.target_audience || a.content_type);
+    return articleAdminFilter === "all" || aud === articleAdminFilter || aud === "all";
+  });
+
+  count.textContent = `全 ${adminArticles.length} 本 ／ 表示 ${rows.length} 本`;
+
+  if (!rows.length) {
+    list.innerHTML = '<div class="empty">該当する記事はまだありません</div>';
+    return;
+  }
+
+  list.innerHTML = rows.map(a => {
+    const aud = normalizeAdminAudience(a.target_audience || a.content_type);
+    const audLabel = aud === "doctor" ? "医師向け" : aud === "staff" ? "事務向け" : "共通";
+    const published = ["published","公開","公開中"].includes(String(a.status || "").toLowerCase());
+    const date = a.published_at ? fmtDate(a.published_at) : "";
+    const source = a.notion_page_id ? "Notion同期" : "登録記事";
+    return `<div class="video-item">
+      <div class="video-item-info" style="min-width:0;">
+        <div class="video-item-title">${esc(a.title || "無題")}</div>
+        <div class="video-item-date">${esc(audLabel)} ／ ${published ? "公開" : "非公開"}${date ? " ／ "+date : ""} ／ ${source}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
 
 function extractYouTubeId(url) {
   const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
@@ -433,69 +476,23 @@ async function issueUser() {
   const btn = document.getElementById("issue-btn");
   msg.className = "msg"; msg.style.display = "none";
   document.getElementById("result-box").classList.remove("show");
-  if (!email) { msg.className="msg error"; msg.style.display="block"; msg.textContent="メールアドレスを入力してください"; return; }
+  if (!email) { msg.className="msg error"; msg.textContent="メールアドレスを入力してください"; return; }
   const tempPw = generateTempPassword();
   btn.disabled = true; btn.textContent = "発行中...";
   try {
     const { data: { session } } = await sb.auth.getSession();
-    if (!session?.access_token) {
-      throw new Error("管理者のログインセッションが確認できません。いったんログインし直してください。");
-    }
-
     const res = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
       body: JSON.stringify({ email, password: tempPw }),
     });
-    const responseText = await res.text();
-    let result = {};
-    try { result = responseText ? JSON.parse(responseText) : {}; } catch (_) {}
-    if (!res.ok) {
-      throw new Error(result.error || result.message || responseText || `アカウント発行に失敗しました（HTTP ${res.status}）`);
-    }
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error);
 
-    // 選択した登録ステータスに応じて初期値を設定
-    const registrationStatus = document.getElementById("new-user-status").value;
-    let initialProfile;
-
-    if (registrationStatus === "contract_doctor") {
-      initialProfile = {
-        user_type: "医師",
-        plan_type: "一般",
-        contract_status: "契約中",
-        is_restricted: false
-      };
-    } else if (registrationStatus === "contract_staff") {
-      initialProfile = {
-        user_type: "事務",
-        plan_type: "一般",
-        contract_status: "契約中",
-        is_restricted: false
-      };
-    } else {
-      initialProfile = {
-        user_type: "医師",
-        plan_type: "一般",
-        contract_status: "契約前",
-        is_restricted: true
-      };
-    }
-
-    const { error: profileError } = await sb
-      .from("user_profiles")
-      .update(initialProfile)
-      .eq("email", email);
-
-    if (profileError) throw new Error("会員情報の初期設定に失敗しました: " + profileError.message);
-
-    const statusLabel =
-      registrationStatus === "contract_doctor" ? "契約済み医師" :
-      registrationStatus === "contract_staff" ? "契約済み事務" :
-      "LINE特典・契約前医師";
+    // 新規ユーザーを自動で視聴制限ありに設定
+    await sb.from("user_profiles").update({ is_restricted: true }).eq("email", email);
 
     btn.disabled = false; btn.textContent = "アカウントを発行する";
-    msg.style.display = "none";
-    document.getElementById("result-title").textContent = `✅ ${statusLabel}としてアカウントを発行しました！`;
     document.getElementById("result-email").textContent = email;
     document.getElementById("result-pw").textContent = tempPw;
     document.getElementById("result-box").classList.add("show");
@@ -503,10 +500,7 @@ async function issueUser() {
     loadUserList();
   } catch(e) {
     btn.disabled = false; btn.textContent = "アカウントを発行する";
-    msg.className="msg error";
-    msg.style.display="block";
-    msg.textContent="エラー: " + (e?.message || String(e));
-    console.error("issueUser error:", e);
+    msg.className="msg error"; msg.textContent="エラー: "+e.message;
   }
 }
 
@@ -524,45 +518,8 @@ function copyResult() {
 async function loadUserList() {
   const { data, error } = await sb.from("user_profiles").select("*").order("created_at", { ascending: false });
   const list = document.getElementById("user-list");
-  if (error) {
-    allUsers = [];
-    list.innerHTML = `<div class="empty">読み込みに失敗しました: ${esc(error.message)}</div>`;
-    document.getElementById("member-count").textContent = "全0名／表示0名";
-    return;
-  }
-  allUsers = data || [];
-  applyMemberFilters();
-}
-
-function applyMemberFilters() {
-  const keyword = (document.getElementById("member-search")?.value || "").trim().toLowerCase();
-  const userType = document.getElementById("filter-user-type")?.value || "";
-  const planType = document.getElementById("filter-plan-type")?.value || "";
-  const contractStatus = document.getElementById("filter-contract-status")?.value || "";
-  const restricted = document.getElementById("filter-restricted")?.value || "";
-
-  const filtered = allUsers.filter(u => {
-    const currentUserType = u.user_type || "事務";
-    const currentPlanType = u.plan_type || "一般";
-    const currentContractStatus = u.contract_status || "契約中";
-    const emailMatch = !keyword || String(u.email || "").toLowerCase().includes(keyword);
-    const userTypeMatch = !userType || currentUserType === userType;
-    const planMatch = !planType || currentPlanType === planType;
-    const contractMatch = !contractStatus || currentContractStatus === contractStatus;
-    const restrictedMatch = restricted === "" || String(!!u.is_restricted) === restricted;
-    return emailMatch && userTypeMatch && planMatch && contractMatch && restrictedMatch;
-  });
-
-  renderUserList(filtered);
-  document.getElementById("member-count").textContent = `全${allUsers.length}名／表示${filtered.length}名`;
-}
-
-function renderUserList(data) {
-  const list = document.getElementById("user-list");
-  if (!data || data.length === 0) {
-    list.innerHTML = '<div class="empty">該当するユーザーがいません</div>';
-    return;
-  }
+  if (error) { list.innerHTML = `<div class="empty">読み込みに失敗しました: ${esc(error.message)}</div>`; return; }
+  if (!data || data.length === 0) { list.innerHTML = '<div class="empty">ユーザーがいません</div>'; return; }
 
   list.innerHTML = data.map(u => {
     const uid = esc(u.id);
@@ -599,7 +556,7 @@ function renderUserList(data) {
           <div class="member-field">
             <label>契約状況</label>
             <select id="contract-status-${uid}">
-              ${optionHtml(["契約前","契約中","停止","契約終了"], contractStatus)}
+              ${optionHtml(["契約中","停止","契約終了"], contractStatus)}
             </select>
           </div>
           <div class="member-field">
