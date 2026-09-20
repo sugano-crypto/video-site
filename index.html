@@ -83,7 +83,12 @@ body.is-admin .card-delete-btn { display: block; }
 .contract-badge.paused { display:inline-flex; background:#fff6df; color:#8a6418; border:1px solid #f1dfae; }
 .contract-badge.ended { display:inline-flex; background:#f5eaea; color:#a33a32; border:1px solid #ecc9c6; }
 
-.article-section{margin-top:44px}.article-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.article-tab{border:1.5px solid var(--gray-200);background:var(--white);color:var(--gray-600);padding:7px 14px;border-radius:999px;font-size:12px;font-family:inherit;cursor:pointer}.article-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}.article-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}.article-card{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:18px;cursor:pointer}.article-card.locked{background:#fbfcfe}.article-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.article-chip{padding:3px 9px;border-radius:999px;font-size:10px;font-weight:700;background:var(--sky-light);color:var(--navy)}.article-chip.staff{background:#eef0f7;color:#58657a}.article-chip.lock{background:#f5eaea;color:#a33a32}.article-title{font-size:15px;font-weight:700;line-height:1.65}.article-date{margin-top:12px;font-size:11px;color:var(--gray-400)}.article-lock-note{margin-top:12px;font-size:12px;color:var(--gray-400)}#article-modal{display:none;position:fixed;inset:0;background:rgba(26,58,92,.45);z-index:250;align-items:center;justify-content:center;padding:24px}.article-modal-card{width:min(860px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;padding:30px}.article-modal-top{display:flex;justify-content:space-between;gap:20px}.article-modal-title{font-size:22px;font-weight:700;color:var(--navy);line-height:1.55}.article-close{border:none;background:var(--gray-100);border-radius:8px;padding:7px 11px;cursor:pointer}.article-body{font-size:14px;line-height:2;white-space:pre-wrap}.article-source{margin-top:24px;padding-top:16px;border-top:1px solid var(--gray-200);font-size:12px}
+.content-switch{display:flex;gap:10px;margin:0 0 24px;border-bottom:1px solid var(--gray-200);padding-bottom:12px}
+.content-switch-btn{flex:1;max-width:240px;border:1.5px solid var(--gray-200);background:var(--white);color:var(--gray-600);padding:12px 18px;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:.18s}
+.content-switch-btn:hover{border-color:var(--sky);color:var(--navy)}
+.content-switch-btn.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.content-panel{display:none}.content-panel.active{display:block}
+.article-section{margin-top:0}.article-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.article-tab{border:1.5px solid var(--gray-200);background:var(--white);color:var(--gray-600);padding:7px 14px;border-radius:999px;font-size:12px;font-family:inherit;cursor:pointer}.article-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}.article-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}.article-card{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:18px;cursor:pointer}.article-card.locked{background:#fbfcfe}.article-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.article-chip{padding:3px 9px;border-radius:999px;font-size:10px;font-weight:700;background:var(--sky-light);color:var(--navy)}.article-chip.staff{background:#eef0f7;color:#58657a}.article-chip.lock{background:#f5eaea;color:#a33a32}.article-title{font-size:15px;font-weight:700;line-height:1.65}.article-date{margin-top:12px;font-size:11px;color:var(--gray-400)}.article-lock-note{margin-top:12px;font-size:12px;color:var(--gray-400)}#article-modal{display:none;position:fixed;inset:0;background:rgba(26,58,92,.45);z-index:250;align-items:center;justify-content:center;padding:24px}.article-modal-card{width:min(860px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;padding:30px}.article-modal-top{display:flex;justify-content:space-between;gap:20px}.article-modal-title{font-size:22px;font-weight:700;color:var(--navy);line-height:1.55}.article-close{border:none;background:var(--gray-100);border-radius:8px;padding:7px 11px;cursor:pointer}.article-body{font-size:14px;line-height:2;white-space:pre-wrap}.article-source{margin-top:24px;padding-top:16px;border-top:1px solid var(--gray-200);font-size:12px}
 @media (max-width: 600px) {
 .video-grid { grid-template-columns: 1fr; gap: 14px; }
 .auth-card { padding: 36px 24px 32px; }
@@ -182,21 +187,34 @@ body.is-admin .card-delete-btn { display: block; }
     </div>
   </header>
   <div class="container">
-    <div class="section-header">
-      <div class="section-title" id="video-count">動画を読み込んでいます...</div>
+    <div class="content-switch" role="tablist" aria-label="コンテンツ切替">
+      <button id="tab-videos" class="content-switch-btn active" onclick="switchContent('videos', this)">🎬 動画コンテンツ</button>
+      <button id="tab-articles" class="content-switch-btn" onclick="switchContent('articles', this)">📝 記事コンテンツ</button>
     </div>
-    <div class="video-grid" id="video-grid">
-      <div class="loading">読み込み中...</div>
-    </div>
-    <section class="article-section">
-      <div class="section-header"><div class="section-title" id="article-count">記事を読み込んでいます...</div></div>
-      <div class="article-tabs">
-        <button class="article-tab active" onclick="setArticleFilter('all',this)">すべて</button>
-        <button class="article-tab" onclick="setArticleFilter('doctor',this)">医師向け</button>
-        <button class="article-tab" onclick="setArticleFilter('staff',this)">事務向け</button>
+
+    <div id="panel-videos" class="content-panel active">
+      <div class="section-header">
+        <div class="section-title" id="video-count">動画を読み込んでいます...</div>
+        <button class="add-video-btn" id="add-video-btn" onclick="openAddModal()">＋ 動画を登録</button>
       </div>
-      <div class="article-grid" id="article-grid"><div class="loading">読み込み中...</div></div>
-    </section>
+      <div class="video-grid" id="video-grid">
+        <div class="loading">読み込み中...</div>
+      </div>
+    </div>
+
+    <div id="panel-articles" class="content-panel">
+      <section class="article-section">
+        <div class="section-header">
+          <div class="section-title" id="article-count">記事を読み込んでいます...</div>
+        </div>
+        <div class="article-tabs">
+          <button class="article-tab active" onclick="setArticleFilter('all',this)">すべて</button>
+          <button class="article-tab" onclick="setArticleFilter('doctor',this)">医師向け</button>
+          <button class="article-tab" onclick="setArticleFilter('staff',this)">事務向け</button>
+        </div>
+        <div class="article-grid" id="article-grid"><div class="loading">読み込み中...</div></div>
+      </section>
+    </div>
   </div>
 </div>
 <div id="article-modal" onclick="closeArticleModal()"><div class="article-modal-card" onclick="event.stopPropagation()">
@@ -452,6 +470,14 @@ async function loadVideos() {
   }).join("");
 }
 
+
+function switchContent(type, btn){
+  document.querySelectorAll(".content-switch-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".content-panel").forEach(p=>p.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+  const panel=document.getElementById(type==="articles"?"panel-articles":"panel-videos");
+  if(panel) panel.classList.add("active");
+}
 
 function normalizeAudience(v){const s=String(v||"").trim().toLowerCase();if(["医師","医師向け","doctor","doctors"].includes(s))return"doctor";if(["事務","事務向け","staff","office","admin"].includes(s))return"staff";if(["全員","共通","all","both"].includes(s))return"all";return s||"all";}
 function canReadArticle(a){if(currentUser?.email===ADMIN_EMAIL)return true;const st=currentProfile?.contract_status||"契約中",ut=String(currentProfile?.user_type||""),aud=normalizeAudience(a.target_audience);if(["停止","契約終了","契約前"].includes(st))return false;if(ut==="医師")return true;if(ut==="事務")return aud==="staff"||aud==="all";return false;}
