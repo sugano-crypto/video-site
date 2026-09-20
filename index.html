@@ -83,6 +83,7 @@ body.is-admin .card-delete-btn { display: block; }
 .contract-badge.paused { display:inline-flex; background:#fff6df; color:#8a6418; border:1px solid #f1dfae; }
 .contract-badge.ended { display:inline-flex; background:#f5eaea; color:#a33a32; border:1px solid #ecc9c6; }
 
+.article-section{margin-top:44px}.article-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.article-tab{border:1.5px solid var(--gray-200);background:var(--white);color:var(--gray-600);padding:7px 14px;border-radius:999px;font-size:12px;font-family:inherit;cursor:pointer}.article-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}.article-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}.article-card{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:18px;cursor:pointer}.article-card.locked{background:#fbfcfe}.article-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.article-chip{padding:3px 9px;border-radius:999px;font-size:10px;font-weight:700;background:var(--sky-light);color:var(--navy)}.article-chip.staff{background:#eef0f7;color:#58657a}.article-chip.lock{background:#f5eaea;color:#a33a32}.article-title{font-size:15px;font-weight:700;line-height:1.65}.article-date{margin-top:12px;font-size:11px;color:var(--gray-400)}.article-lock-note{margin-top:12px;font-size:12px;color:var(--gray-400)}#article-modal{display:none;position:fixed;inset:0;background:rgba(26,58,92,.45);z-index:250;align-items:center;justify-content:center;padding:24px}.article-modal-card{width:min(860px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;padding:30px}.article-modal-top{display:flex;justify-content:space-between;gap:20px}.article-modal-title{font-size:22px;font-weight:700;color:var(--navy);line-height:1.55}.article-close{border:none;background:var(--gray-100);border-radius:8px;padding:7px 11px;cursor:pointer}.article-body{font-size:14px;line-height:2;white-space:pre-wrap}.article-source{margin-top:24px;padding-top:16px;border-top:1px solid var(--gray-200);font-size:12px}
 @media (max-width: 600px) {
 .video-grid { grid-template-columns: 1fr; gap: 14px; }
 .auth-card { padding: 36px 24px 32px; }
@@ -187,8 +188,21 @@ body.is-admin .card-delete-btn { display: block; }
     <div class="video-grid" id="video-grid">
       <div class="loading">読み込み中...</div>
     </div>
+    <section class="article-section">
+      <div class="section-header"><div class="section-title" id="article-count">記事を読み込んでいます...</div></div>
+      <div class="article-tabs">
+        <button class="article-tab active" onclick="setArticleFilter('all',this)">すべて</button>
+        <button class="article-tab" onclick="setArticleFilter('doctor',this)">医師向け</button>
+        <button class="article-tab" onclick="setArticleFilter('staff',this)">事務向け</button>
+      </div>
+      <div class="article-grid" id="article-grid"><div class="loading">読み込み中...</div></div>
+    </section>
   </div>
 </div>
+<div id="article-modal" onclick="closeArticleModal()"><div class="article-modal-card" onclick="event.stopPropagation()">
+<div class="article-modal-top"><div><div class="article-meta" id="article-modal-meta"></div><div class="article-modal-title" id="article-modal-title"></div></div><button class="article-close" onclick="closeArticleModal()">×</button></div>
+<div class="article-body" id="article-modal-body"></div><div class="article-source" id="article-modal-source"></div>
+</div></div>
 
 <!-- 視聴制限モーダル -->
 <div id="lock-modal" style="display:none; position:fixed; inset:0; background:rgba(26,58,92,0.4); backdrop-filter:blur(3px); z-index:200; align-items:center; justify-content:center;" onclick="closeLockModal()">
@@ -229,8 +243,11 @@ const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = null;
+let currentProfile = null;
 let isRestricted = false;
 let allowedVideoIds = new Set();
+let allArticles = [];
+let articleFilter = "all";
 
 const screens = ["login-screen", "firstpw-screen", "reset-screen"];
 function showScreen(id) {
@@ -281,6 +298,7 @@ async function doResetPassword() {
 
 async function setupUser(user, profile) {
   currentUser = user;
+  currentProfile = profile || {};
 
   // 管理者は契約状態に関係なく管理可能
   const isAdmin = user.email === ADMIN_EMAIL;
@@ -306,6 +324,7 @@ async function setupUser(user, profile) {
   }
   showMain();
   loadVideos();
+  loadArticles();
 }
 
 async function doFirstPasswordChange() {
@@ -346,7 +365,9 @@ function updateContractBadge(status, isAdmin) {
   }
 
   badge.textContent = status || "契約中";
-  if (status === "停止") {
+  if (status === "契約前") {
+    badge.className = "contract-badge paused";
+  } else if (status === "停止") {
     badge.className = "contract-badge paused";
   } else if (status === "契約終了") {
     badge.className = "contract-badge ended";
@@ -430,6 +451,16 @@ async function loadVideos() {
     }
   }).join("");
 }
+
+
+function normalizeAudience(v){const s=String(v||"").trim().toLowerCase();if(["医師","医師向け","doctor","doctors"].includes(s))return"doctor";if(["事務","事務向け","staff","office","admin"].includes(s))return"staff";if(["全員","共通","all","both"].includes(s))return"all";return s||"all";}
+function canReadArticle(a){if(currentUser?.email===ADMIN_EMAIL)return true;const st=currentProfile?.contract_status||"契約中",ut=String(currentProfile?.user_type||""),aud=normalizeAudience(a.target_audience);if(["停止","契約終了","契約前"].includes(st))return false;if(ut==="医師")return true;if(ut==="事務")return aud==="staff"||aud==="all";return false;}
+function shouldShowArticle(a){if(currentUser?.email===ADMIN_EMAIL)return true;const st=currentProfile?.contract_status||"契約中",ut=String(currentProfile?.user_type||""),aud=normalizeAudience(a.target_audience);if(ut==="医師"&&st==="契約前")return true;if(["停止","契約終了"].includes(st))return true;if(ut==="医師")return true;if(ut==="事務")return aud==="staff"||aud==="all";return false;}
+async function loadArticles(){const grid=document.getElementById("article-grid"),count=document.getElementById("article-count");const{data,error}=await sb.from("articles").select("id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url").order("published_at",{ascending:false});if(error){console.error(error);count.textContent="記事コンテンツ";grid.innerHTML='<div class="loading">記事データの読み込みに失敗しました。</div>';return;}allArticles=(data||[]).filter(a=>{const s=String(a.status||"").toLowerCase();return !s||["published","公開","公開中"].includes(s)}).filter(shouldShowArticle);renderArticles();}
+function setArticleFilter(f,b){articleFilter=f;document.querySelectorAll(".article-tab").forEach(x=>x.classList.remove("active"));b?.classList.add("active");renderArticles();}
+function renderArticles(){const grid=document.getElementById("article-grid"),count=document.getElementById("article-count");const arr=allArticles.filter(a=>articleFilter==="all"||normalizeAudience(a.target_audience)===articleFilter||normalizeAudience(a.target_audience)==="all");count.textContent=`記事コンテンツ　全 ${allArticles.length} 本`;if(!arr.length){grid.innerHTML='<div class="loading">該当する記事はまだありません。</div>';return;}grid.innerHTML=arr.map(a=>{const aud=normalizeAudience(a.target_audience),ok=canReadArticle(a),label=aud==="doctor"?"医師向け":aud==="staff"?"事務向け":"共通";return `<article class="article-card ${ok?"":"locked"}" onclick="openArticle('${a.id}')"><div class="article-meta"><span class="article-chip ${aud==="staff"?"staff":""}">${label}</span>${ok?"":'<span class="article-chip lock">🔒 タイトルのみ</span>'}</div><div class="article-title">${esc(a.title||"無題")}</div><div class="article-date">${a.published_at?fmtDate(a.published_at):""}</div>${ok?"":'<div class="article-lock-note">契約後に全文をお読みいただけます。</div>'}</article>`}).join("");}
+function openArticle(id){const a=allArticles.find(x=>String(x.id)===String(id));if(!a)return;if(!canReadArticle(a)){showLockModal();return;}const aud=normalizeAudience(a.target_audience),label=aud==="doctor"?"医師向け":aud==="staff"?"事務向け":"共通";document.getElementById("article-modal-title").textContent=a.title||"無題";document.getElementById("article-modal-meta").innerHTML=`<span class="article-chip ${aud==="staff"?"staff":""}">${label}</span>`;document.getElementById("article-modal-body").textContent=a.body||a.free_body||"本文が登録されていません。";const s=document.getElementById("article-modal-source");s.innerHTML=a.note_url&&/^https?:\/\//i.test(a.note_url)?`<a href="${esc(a.note_url)}" target="_blank" rel="noopener noreferrer">note掲載ページを開く</a>`:"";document.getElementById("article-modal").style.display="flex";}
+function closeArticleModal(){document.getElementById("article-modal").style.display="none";}
 
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function fmtDate(d) { const dt = new Date(d); return `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日`; }
