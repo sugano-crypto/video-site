@@ -549,30 +549,7 @@ function switchContent(type, btn){
 function normalizeAudience(v){const s=String(v||"").trim().toLowerCase();if(["医師","医師向け","doctor","doctors"].includes(s))return"doctor";if(["事務","事務向け","staff","office","admin"].includes(s))return"staff";if(["全員","共通","all","both"].includes(s))return"all";return s||"all";}
 function canReadArticle(a){if(currentUser?.email===ADMIN_EMAIL)return true;const st=currentProfile?.contract_status||"契約中",ut=String(currentProfile?.user_type||""),aud=normalizeAudience(a.target_audience);if(["停止","契約終了","契約前"].includes(st))return false;if(ut==="医師")return true;if(ut==="事務")return aud==="staff"||aud==="all";return false;}
 function shouldShowArticle(a){if(currentUser?.email===ADMIN_EMAIL)return true;const st=currentProfile?.contract_status||"契約中",ut=String(currentProfile?.user_type||""),aud=normalizeAudience(a.target_audience);if(ut==="医師"&&st==="契約前")return true;if(["停止","契約終了"].includes(st))return true;if(ut==="医師")return true;if(ut==="事務")return aud==="staff"||aud==="all";return false;}
-async function loadArticles(){
-  const grid=document.getElementById("article-grid"),count=document.getElementById("article-count");
-  const{data,error}=await sb.from("articles")
-    .select("id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url")
-    .order("published_at",{ascending:false});
-
-  if(error){
-    console.error(error);
-    count.textContent="記事コンテンツ";
-    grid.innerHTML='<div class="loading">記事データの読み込みに失敗しました。</div>';
-    return;
-  }
-
-  // status が空欄の既存記事も表示対象に戻す。
-  // 公開制御は、Notion→Supabase側の同期確認後に実装する。
-  allArticles=(data||[])
-    .filter(a=>{
-      const s=String(a.status||"").trim().toLowerCase();
-      return !s || ["published","公開","公開中"].includes(s);
-    })
-    .filter(shouldShowArticle);
-
-  renderArticles();
-}
+async function loadArticles(){const grid=document.getElementById("article-grid"),count=document.getElementById("article-count");const{data,error}=await sb.from("articles").select("id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url").order("published_at",{ascending:false});if(error){console.error(error);count.textContent="記事コンテンツ";grid.innerHTML='<div class="loading">記事データの読み込みに失敗しました。</div>';return;}allArticles=(data||[]).filter(a=>{const s=String(a.status||"").toLowerCase();return !s||["published","公開","公開中"].includes(s)}).filter(shouldShowArticle);renderArticles();}
 function setArticleFilter(f,b){articleFilter=f;document.querySelectorAll(".article-tab").forEach(x=>x.classList.remove("active"));b?.classList.add("active");renderArticles();}
 function renderArticles(){
   const grid=document.getElementById("article-grid"),count=document.getElementById("article-count");
@@ -589,13 +566,12 @@ function renderArticles(){
   grid.innerHTML="";
   if(!arr.length){grid.innerHTML='<p style="color:#718096">記事はまだありません。</p>';return;}
   arr.forEach(a=>{
-    const aud=normalizeAudience(a.target_audience),label=aud==="doctor"?"医師向け":aud==="staff"?"事務向け":"共通";
     const card=document.createElement("div");card.className="article-card";card.onclick=()=>openArticle(a.id);
-    card.innerHTML=`<span class="article-badge">${esc(label)}</span><h3>${esc(a.title||"無題")}</h3><div class="article-date">${a.published_at?fmtDate(a.published_at):""}</div>`;
+    card.innerHTML=`<h3>${esc(a.title||"無題")}</h3><div class="article-date">${a.published_at?fmtDate(a.published_at):""}</div>`;
     grid.appendChild(card);
   });
 }
-function openArticle(id){const a=allArticles.find(x=>String(x.id)===String(id));if(!a)return;if(!canReadArticle(a)){showLockModal();return;}const aud=normalizeAudience(a.target_audience),label=aud==="doctor"?"医師向け":aud==="staff"?"事務向け":"共通";document.getElementById("article-modal-title").textContent=a.title||"無題";document.getElementById("article-modal-meta").innerHTML=`<span class="article-chip ${aud==="staff"?"staff":""}">${label}</span>`;document.getElementById("article-modal-body").textContent=a.body||a.free_body||"本文が登録されていません。";const s=document.getElementById("article-modal-source");s.innerHTML="";document.getElementById("article-modal").style.display="flex";}
+function openArticle(id){const a=allArticles.find(x=>String(x.id)===String(id));if(!a)return;if(!canReadArticle(a)){showLockModal();return;}document.getElementById("article-modal-title").textContent=a.title||"無題";document.getElementById("article-modal-meta").innerHTML="";document.getElementById("article-modal-body").textContent=a.body||a.free_body||"本文が登録されていません。";const s=document.getElementById("article-modal-source");s.innerHTML="";document.getElementById("article-modal").style.display="flex";}
 function closeArticleModal(){document.getElementById("article-modal").style.display="none";}
 
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
