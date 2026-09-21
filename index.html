@@ -562,12 +562,12 @@ async function loadArticles(){
     return;
   }
 
-  // 「公開」と明示されている記事だけを会員サイトに表示する。
-  // 空欄・非公開・下書き等は表示しない。
+  // status が空欄の既存記事も表示対象に戻す。
+  // 公開制御は、Notion→Supabase側の同期確認後に実装する。
   allArticles=(data||[])
     .filter(a=>{
       const s=String(a.status||"").trim().toLowerCase();
-      return ["published","公開","公開中"].includes(s);
+      return !s || ["published","公開","公開中"].includes(s);
     })
     .filter(shouldShowArticle);
 
