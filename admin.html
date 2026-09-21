@@ -1,3 +1,4 @@
+```
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -204,7 +205,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
     <div class="page-title" style="margin-bottom:8px;">ユーザーアカウントを発行する</div>
     <div class="page-sub">
       メールアドレスを登録すると仮パスワードが自動生成されます。仮パスワードをLINEやメールで本人に送ってください。初回ログイン時にパスワード変更が必須です。<br>
-      <strong style="color:var(--navy);">※新規ユーザーは自動的に「視聴制限あり」で登録されます。制限を解除する場合は下の「登録済みユーザー」から変更してください。</strong>
+      <strong style="color:var(--navy);">※新規ユーザーは自動的に「未契約・視聴制限あり」で登録されます。契約成立後は下の「会員管理」で「契約中」に変更してください。</strong>
     </div>
     <div class="card">
       <div class="form-group">
@@ -214,7 +215,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--gray-100); col
       <button class="submit-btn" id="issue-btn" onclick="issueUser()">アカウントを発行する</button>
       <div class="msg" id="issue-msg"></div>
       <div class="result-box" id="result-box">
-        <div class="result-title">✅ アカウントを発行しました！（視聴制限あり）</div>
+        <div class="result-title">✅ アカウントを発行しました！（未契約・視聴制限あり）</div>
         <div class="result-info">
           <div class="result-label">ログインURL</div>
           <div class="result-value">https://sugano-crypto.github.io/video-site/</div>
@@ -489,8 +490,15 @@ async function issueUser() {
     const result = await res.json();
     if (!res.ok) throw new Error(result.error);
 
-    // 新規ユーザーを自動で視聴制限ありに設定
-    await sb.from("user_profiles").update({ is_restricted: true }).eq("email", email);
+    // 新規ユーザーは「未契約」かつ動画の視聴制限ありで登録
+    const { error: profileUpdateError } = await sb
+      .from("user_profiles")
+      .update({ contract_status: "未契約", is_restricted: true })
+      .eq("email", email);
+
+    if (profileUpdateError) {
+      throw new Error("会員情報の初期設定に失敗しました: " + profileUpdateError.message);
+    }
 
     btn.disabled = false; btn.textContent = "アカウントを発行する";
     document.getElementById("result-email").textContent = email;
@@ -525,7 +533,7 @@ async function loadUserList() {
     const uid = esc(u.id);
     const userType = u.user_type || "事務";
     const planType = u.plan_type || "一般";
-    const contractStatus = u.contract_status || "契約中";
+    const contractStatus = u.contract_status || "未契約";
     const startDate = u.contract_start_date ? String(u.contract_start_date).slice(0,10) : "";
     const endDate = u.contract_end_date ? String(u.contract_end_date).slice(0,10) : "";
 
@@ -556,7 +564,7 @@ async function loadUserList() {
           <div class="member-field">
             <label>契約状況</label>
             <select id="contract-status-${uid}">
-              ${optionHtml(["契約中","停止","契約終了"], contractStatus)}
+              ${optionHtml(["未契約","契約中","契約終了"], contractStatus)}
             </select>
           </div>
           <div class="member-field">
@@ -665,3 +673,4 @@ window.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
+```
