@@ -1041,6 +1041,15 @@ await sb
 .eq("id",data.user.id)
 .single();
 
+if(
+data.user.email!==ADMIN_EMAIL &&
+profile?.contract_status==="契約終了"
+){
+  await sb.auth.signOut();
+  msg.textContent="このアカウントの契約は終了しています。";
+  return;
+}
+
 if(profile?.is_first_login){
 
 showScreen("firstpw-screen");
@@ -1069,6 +1078,18 @@ msg.textContent=
 
 return;
 
+}
+
+const {data:resetProfile}=
+await sb
+.from("user_profiles")
+.select("contract_status")
+.eq("email",email)
+.maybeSingle();
+
+if(resetProfile?.contract_status==="契約終了"){
+  msg.textContent="このアカウントの契約は終了しています。";
+  return;
 }
 
 const {error}=
@@ -1103,7 +1124,7 @@ const isAdmin=
 user.email===ADMIN_EMAIL;
 
 const contractStatus=
-profile?.contract_status||"契約中";
+profile?.contract_status||"未契約";
 
 updateContractBadge(
 contractStatus,
@@ -1262,11 +1283,10 @@ return;
 }
 
 badge.textContent=
-status||"契約中";
+status||"未契約";
 
 if(
-status==="契約前" ||
-status==="停止"
+status==="未契約"
 ){
 
 badge.className=
@@ -1696,39 +1716,21 @@ return s||"all";
 
 function canReadArticle(a){
 
-if(
-currentUser?.email===
-ADMIN_EMAIL
-)
+if(currentUser?.email===ADMIN_EMAIL)
 return true;
 
-const st=
-currentProfile?.contract_status
-||"契約中";
+const st=currentProfile?.contract_status||"未契約";
+const ut=String(currentProfile?.user_type||"");
+const aud=normalizeAudience(a.target_audience);
 
-const ut=
-String(
-currentProfile?.user_type||""
-);
-
-const aud=
-normalizeAudience(
-a.target_audience
-);
-
-if([
-"停止",
-"契約終了",
-"契約前"
-].includes(st))
+if(st==="契約終了")
 return false;
 
 if(ut==="医師")
-return true;
+return aud==="doctor" || aud==="all";
 
 if(ut==="事務")
-return aud==="staff" ||
-aud==="all";
+return aud==="staff" || aud==="all";
 
 return false;
 
@@ -1736,44 +1738,21 @@ return false;
 
 function shouldShowArticle(a){
 
-if(
-currentUser?.email===
-ADMIN_EMAIL
-)
+if(currentUser?.email===ADMIN_EMAIL)
 return true;
 
-const st=
-currentProfile?.contract_status
-||"契約中";
+const st=currentProfile?.contract_status||"未契約";
+const ut=String(currentProfile?.user_type||"");
+const aud=normalizeAudience(a.target_audience);
 
-const ut=
-String(
-currentProfile?.user_type||""
-);
-
-const aud=
-normalizeAudience(
-a.target_audience
-);
-
-if(
-ut==="医師" &&
-st==="契約前"
-)
-return true;
-
-if([
-"停止",
-"契約終了"
-].includes(st))
-return true;
+if(st==="契約終了")
+return false;
 
 if(ut==="医師")
-return true;
+return aud==="doctor" || aud==="all";
 
 if(ut==="事務")
-return aud==="staff" ||
-aud==="all";
+return aud==="staff" || aud==="all";
 
 return false;
 
@@ -1952,92 +1931,59 @@ grid.appendChild(card);
 
 function openArticle(id){
 
-const a=
-allArticles.find(
-x=>
-String(x.id)===
-String(id)
-);
-
-if(!a)
-return;
+const a=allArticles.find(x=>String(x.id)===String(id));
+if(!a) return;
 
 if(!canReadArticle(a)){
-
-showLockModal();
-
-return;
-
+  showLockModal();
+  return;
 }
 
-document.getElementById(
-"article-modal-title"
-).textContent=
-a.title||"無題";
+document.getElementById("article-modal-title").textContent=a.title||"無題";
 
-
-const freeBody=
-String(
-a.free_body||""
-).trim();
-
-const paidBody=
-String(
-a.body||""
-).trim();
-
+const freeBody=String(a.free_body||"").trim();
+const paidBody=String(a.body||"").trim();
+const isAdmin=currentUser?.email===ADMIN_EMAIL;
+const contractStatus=currentProfile?.contract_status||"未契約";
 
 let articleBody="";
 
+if(isAdmin || contractStatus==="契約中"){
+  if(freeBody) articleBody+=freeBody;
+  if(freeBody && paidBody) articleBody+="\n\n";
+  if(paidBody) articleBody+=paidBody;
 
-/* 無料部分 */
-
-if(freeBody){
-
-articleBody+=freeBody;
-
+  document.getElementById("article-modal-body").textContent=
+    articleBody || "本文が登録されていません。";
+}else{
+  document.getElementById("article-modal-body").textContent=
+    freeBody || "この記事の無料公開部分はありません。";
 }
 
+const source=document.getElementById("article-modal-source");
+source.innerHTML="";
 
-/* 無料部分と有料部分の間に改行 */
-
-if(
-freeBody &&
-paidBody
-){
-
-articleBody+="\n\n";
-
+if(!isAdmin && contractStatus==="未契約"){
+  source.innerHTML=`
+    <div style="margin-top:8px;padding:20px;border-radius:12px;background:#f5f8fc;border:1px solid #e8eef5;text-align:center;">
+      <div style="font-size:16px;font-weight:700;color:#1a3a5c;margin-bottom:8px;">
+        🔒 続きはご契約中の会員様向けです
+      </div>
+      <div style="font-size:13px;line-height:1.8;color:#4a6280;">
+        続きをご覧いただくにはご契約が必要です。<br>
+        ご契約については、すがコンサルティング＆パートナーズまでお問い合わせください。
+      </div>
+      <a href="mailto:info@sugacon.net"
+         style="display:inline-block;margin-top:14px;padding:10px 18px;border-radius:8px;background:#1a3a5c;color:#fff;text-decoration:none;font-size:13px;font-weight:700;">
+        契約について問い合わせる
+      </a>
+    </div>
+  `;
 }
 
-
-/* 有料部分 */
-
-if(paidBody){
-
-articleBody+=paidBody;
+document.getElementById("article-modal").style.display="flex";
 
 }
-
-
-document.getElementById(
-"article-modal-body"
-).textContent=
-articleBody ||
-"本文が登録されていません。";
-
-
-document.getElementById(
-"article-modal-source"
-).innerHTML="";
-
-
-document.getElementById(
-"article-modal"
-).style.display="flex";
-
-}
-
 
 function closeArticleModal(){
 
@@ -2099,6 +2045,17 @@ await sb
 session.user.id
 )
 .single();
+
+if(
+session.user.email!==ADMIN_EMAIL &&
+profile?.contract_status==="契約終了"
+){
+  await sb.auth.signOut();
+  showScreen("login-screen");
+  const msg=document.getElementById("login-msg");
+  if(msg) msg.textContent="このアカウントの契約は終了しています。";
+  return;
+}
 
 if(
 profile &&
