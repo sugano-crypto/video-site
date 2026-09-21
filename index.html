@@ -1953,11 +1953,11 @@ if(isAdmin || contractStatus==="契約中"){
   if(freeBody && paidBody) articleBody+="\n\n";
   if(paidBody) articleBody+=paidBody;
 
-  document.getElementById("article-modal-body").textContent=
-    articleBody || "本文が登録されていません。";
+  document.getElementById("article-modal-body").innerHTML=
+    linkifyText(articleBody || "本文が登録されていません。");
 }else{
-  document.getElementById("article-modal-body").textContent=
-    freeBody || "この記事の無料公開部分はありません。";
+  document.getElementById("article-modal-body").innerHTML=
+    linkifyText(freeBody || "この記事の無料公開部分はありません。");
 }
 
 const source=document.getElementById("article-modal-source");
@@ -2001,6 +2001,28 @@ return String(s)
 .replace(/</g,"&lt;")
 .replace(/>/g,"&gt;")
 .replace(/"/g,"&quot;");
+
+}
+
+
+function linkifyText(text){
+
+  const escaped=esc(text);
+
+  return escaped.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    (url)=>{
+      let cleanUrl=url;
+      let trailing="";
+
+      while(/[。、，．,.!！?？)）\]】」』〉》]$/.test(cleanUrl)){
+        trailing=cleanUrl.slice(-1)+trailing;
+        cleanUrl=cleanUrl.slice(0,-1);
+      }
+
+      return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" style="color:var(--sky);text-decoration:underline;overflow-wrap:anywhere;">${cleanUrl}</a>${trailing}`;
+    }
+  );
 
 }
 
