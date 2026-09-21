@@ -95,6 +95,16 @@ body.is-admin .card-delete-btn { display: block; }
 .user-email { display: none; }
 .header { padding: 0 16px; }
 }
+
+.article-menu{display:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:18px 0}
+.article-menu.show{display:grid}
+.article-menu-card{background:#fff;border:1px solid #dfe6ef;border-radius:12px;padding:22px;text-align:left;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.article-menu-card:hover{border-color:#9db2d0;box-shadow:0 4px 12px rgba(35,59,98,.08)}
+.article-menu-card h3{margin:0 0 8px;font-size:17px;color:#173154}
+.article-menu-card p{margin:0;color:#66758a;font-size:13px;line-height:1.7}
+.article-back{display:none;margin:8px 0 14px;background:none;border:0;color:#315b94;cursor:pointer;font-weight:700;padding:0}
+.article-back.show{display:block}
+@media(max-width:700px){.article-menu{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -207,10 +217,17 @@ body.is-admin .card-delete-btn { display: block; }
         <div class="section-header">
           <div class="section-title" id="article-count">記事を読み込んでいます...</div>
         </div>
-        <div class="article-tabs" id="article-tabs">
-          <button class="article-tab" id="article-tab-doctor" onclick="setArticleFilter('doctor',this)">🩺 医師向けコンテンツ</button>
-          <button class="article-tab" id="article-tab-staff" onclick="setArticleFilter('staff',this)">🏥 事務向けコンテンツ</button>
+        <div id="article-menu" class="article-menu">
+          <button class="article-menu-card" onclick="openArticleCategory('doctor')">
+            <h3>🩺 医師向けコンテンツ</h3>
+            <p>開業・経営・患者獲得など、医師向けの記事をまとめています。</p>
+          </button>
+          <button class="article-menu-card" onclick="openArticleCategory('staff')">
+            <h3>🏥 事務向けコンテンツ</h3>
+            <p>医療・介護最新トピックス、制度・経営情報などをまとめています。</p>
+          </button>
         </div>
+        <button id="article-back" class="article-back" onclick="showArticleMenu()">← 記事コンテンツの目次へ戻る</button>
         <div class="article-grid" id="article-grid"><div class="loading">読み込み中...</div></div>
       </section>
     </div>
