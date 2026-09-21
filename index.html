@@ -549,7 +549,30 @@ function switchContent(type, btn){
 function normalizeAudience(v){const s=String(v||"").trim().toLowerCase();if(["医師","医師向け","doctor","doctors"].includes(s))return"doctor";if(["事務","事務向け","staff","office","admin"].includes(s))return"staff";if(["全員","共通","all","both"].includes(s))return"all";return s||"all";}
 function canReadArticle(a){if(currentUser?.email===ADMIN_EMAIL)return true;const st=currentProfile?.contract_status||"契約中",ut=String(currentProfile?.user_type||""),aud=normalizeAudience(a.target_audience);if(["停止","契約終了","契約前"].includes(st))return false;if(ut==="医師")return true;if(ut==="事務")return aud==="staff"||aud==="all";return false;}
 function shouldShowArticle(a){if(currentUser?.email===ADMIN_EMAIL)return true;const st=currentProfile?.contract_status||"契約中",ut=String(currentProfile?.user_type||""),aud=normalizeAudience(a.target_audience);if(ut==="医師"&&st==="契約前")return true;if(["停止","契約終了"].includes(st))return true;if(ut==="医師")return true;if(ut==="事務")return aud==="staff"||aud==="all";return false;}
-async function loadArticles(){const grid=document.getElementById("article-grid"),count=document.getElementById("article-count");const{data,error}=await sb.from("articles").select("id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url").order("published_at",{ascending:false});if(error){console.error(error);count.textContent="記事コンテンツ";grid.innerHTML='<div class="loading">記事データの読み込みに失敗しました。</div>';return;}allArticles=(data||[]).filter(a=>{const s=String(a.status||"").toLowerCase();return !s||["published","公開","公開中"].includes(s)}).filter(shouldShowArticle);renderArticles();}
+async function loadArticles(){
+  const grid=document.getElementById("article-grid"),count=document.getElementById("article-count");
+  const{data,error}=await sb.from("articles")
+    .select("id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url")
+    .order("published_at",{ascending:false});
+
+  if(error){
+    console.error(error);
+    count.textContent="記事コンテンツ";
+    grid.innerHTML='<div class="loading">記事データの読み込みに失敗しました。</div>';
+    return;
+  }
+
+  // 「公開」と明示されている記事だけを会員サイトに表示する。
+  // 空欄・非公開・下書き等は表示しない。
+  allArticles=(data||[])
+    .filter(a=>{
+      const s=String(a.status||"").trim().toLowerCase();
+      return ["published","公開","公開中"].includes(s);
+    })
+    .filter(shouldShowArticle);
+
+  renderArticles();
+}
 function setArticleFilter(f,b){articleFilter=f;document.querySelectorAll(".article-tab").forEach(x=>x.classList.remove("active"));b?.classList.add("active");renderArticles();}
 function renderArticles(){
   const grid=document.getElementById("article-grid"),count=document.getElementById("article-count");
