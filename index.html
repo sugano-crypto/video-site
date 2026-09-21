@@ -188,11 +188,11 @@ body.is-admin .card-delete-btn { display: block; }
   </header>
   <div class="container">
     <div class="content-switch" role="tablist" aria-label="コンテンツ切替">
-      <button id="tab-videos" class="content-switch-btn active" onclick="switchContent('videos', this)">🎬 動画コンテンツ</button>
-      <button id="tab-articles" class="content-switch-btn" onclick="switchContent('articles', this)">📝 記事コンテンツ</button>
+      <button id="tab-articles" class="content-switch-btn active" onclick="switchContent('articles', this)">📝 記事コンテンツ</button>
+      <button id="tab-videos" class="content-switch-btn" onclick="switchContent('videos', this)">🎬 動画コンテンツ</button>
     </div>
 
-    <div id="panel-videos" class="content-panel active">
+    <div id="panel-videos" class="content-panel">
       <div class="section-header">
         <div class="section-title" id="video-count">動画を読み込んでいます...</div>
         <button class="add-video-btn" id="add-video-btn" onclick="openAddModal()">＋ 動画を登録</button>
@@ -202,15 +202,14 @@ body.is-admin .card-delete-btn { display: block; }
       </div>
     </div>
 
-    <div id="panel-articles" class="content-panel">
+    <div id="panel-articles" class="content-panel active">
       <section class="article-section">
         <div class="section-header">
           <div class="section-title" id="article-count">記事を読み込んでいます...</div>
         </div>
-        <div class="article-tabs">
-          <button class="article-tab active" onclick="setArticleFilter('all',this)">すべて</button>
-          <button class="article-tab" onclick="setArticleFilter('doctor',this)">医師向け</button>
-          <button class="article-tab" onclick="setArticleFilter('staff',this)">事務向け</button>
+        <div class="article-tabs" id="article-tabs">
+          <button class="article-tab" id="article-tab-doctor" onclick="setArticleFilter('doctor',this)">🩺 医師向けコンテンツ</button>
+          <button class="article-tab" id="article-tab-staff" onclick="setArticleFilter('staff',this)">🏥 事務向けコンテンツ</button>
         </div>
         <div class="article-grid" id="article-grid"><div class="loading">読み込み中...</div></div>
       </section>
@@ -341,8 +340,13 @@ async function setupUser(user, profile) {
     allowedVideoIds = new Set((perms || []).map(p => p.video_id));
   }
   showMain();
-  loadVideos();
+  setupContentForUser();
   loadArticles();
+
+  const userType = String(currentProfile?.user_type || "");
+  if (isAdmin || userType === "医師") {
+    loadVideos();
+  }
 }
 
 async function doFirstPasswordChange() {
@@ -471,6 +475,31 @@ async function loadVideos() {
 }
 
 
+
+function setupContentForUser(){
+  const isAdmin = currentUser?.email === ADMIN_EMAIL;
+  const userType = String(currentProfile?.user_type || "");
+  const videoTab = document.getElementById("tab-videos");
+  const articleTab = document.getElementById("tab-articles");
+  const articleTabs = document.getElementById("article-tabs");
+  const doctorTab = document.getElementById("article-tab-doctor");
+  const staffTab = document.getElementById("article-tab-staff");
+
+  switchContent("articles", articleTab);
+
+  if (!isAdmin && userType === "事務") {
+    if (videoTab) videoTab.style.display = "none";
+    if (articleTabs) articleTabs.style.display = "none";
+    articleFilter = "staff";
+  } else {
+    if (videoTab) videoTab.style.display = "";
+    if (articleTabs) articleTabs.style.display = "flex";
+    articleFilter = "doctor";
+    doctorTab?.classList.add("active");
+    staffTab?.classList.remove("active");
+  }
+}
+
 function switchContent(type, btn){
   document.querySelectorAll(".content-switch-btn").forEach(b=>b.classList.remove("active"));
   document.querySelectorAll(".content-panel").forEach(p=>p.classList.remove("active"));
@@ -484,8 +513,8 @@ function canReadArticle(a){if(currentUser?.email===ADMIN_EMAIL)return true;const
 function shouldShowArticle(a){if(currentUser?.email===ADMIN_EMAIL)return true;const st=currentProfile?.contract_status||"契約中",ut=String(currentProfile?.user_type||""),aud=normalizeAudience(a.target_audience);if(ut==="医師"&&st==="契約前")return true;if(["停止","契約終了"].includes(st))return true;if(ut==="医師")return true;if(ut==="事務")return aud==="staff"||aud==="all";return false;}
 async function loadArticles(){const grid=document.getElementById("article-grid"),count=document.getElementById("article-count");const{data,error}=await sb.from("articles").select("id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url").order("published_at",{ascending:false});if(error){console.error(error);count.textContent="記事コンテンツ";grid.innerHTML='<div class="loading">記事データの読み込みに失敗しました。</div>';return;}allArticles=(data||[]).filter(a=>{const s=String(a.status||"").toLowerCase();return !s||["published","公開","公開中"].includes(s)}).filter(shouldShowArticle);renderArticles();}
 function setArticleFilter(f,b){articleFilter=f;document.querySelectorAll(".article-tab").forEach(x=>x.classList.remove("active"));b?.classList.add("active");renderArticles();}
-function renderArticles(){const grid=document.getElementById("article-grid"),count=document.getElementById("article-count");const arr=allArticles.filter(a=>articleFilter==="all"||normalizeAudience(a.target_audience)===articleFilter||normalizeAudience(a.target_audience)==="all");count.textContent=`記事コンテンツ　全 ${allArticles.length} 本`;if(!arr.length){grid.innerHTML='<div class="loading">該当する記事はまだありません。</div>';return;}grid.innerHTML=arr.map(a=>{const aud=normalizeAudience(a.target_audience),ok=canReadArticle(a),label=aud==="doctor"?"医師向け":aud==="staff"?"事務向け":"共通";return `<article class="article-card ${ok?"":"locked"}" onclick="openArticle('${a.id}')"><div class="article-meta"><span class="article-chip ${aud==="staff"?"staff":""}">${label}</span>${ok?"":'<span class="article-chip lock">🔒 タイトルのみ</span>'}</div><div class="article-title">${esc(a.title||"無題")}</div><div class="article-date">${a.published_at?fmtDate(a.published_at):""}</div>${ok?"":'<div class="article-lock-note">契約後に全文をお読みいただけます。</div>'}</article>`}).join("");}
-function openArticle(id){const a=allArticles.find(x=>String(x.id)===String(id));if(!a)return;if(!canReadArticle(a)){showLockModal();return;}const aud=normalizeAudience(a.target_audience),label=aud==="doctor"?"医師向け":aud==="staff"?"事務向け":"共通";document.getElementById("article-modal-title").textContent=a.title||"無題";document.getElementById("article-modal-meta").innerHTML=`<span class="article-chip ${aud==="staff"?"staff":""}">${label}</span>`;document.getElementById("article-modal-body").textContent=a.body||a.free_body||"本文が登録されていません。";const s=document.getElementById("article-modal-source");s.innerHTML=a.note_url&&/^https?:\/\//i.test(a.note_url)?`<a href="${esc(a.note_url)}" target="_blank" rel="noopener noreferrer">note掲載ページを開く</a>`:"";document.getElementById("article-modal").style.display="flex";}
+function renderArticles(){const grid=document.getElementById("article-grid"),count=document.getElementById("article-count");const arr=allArticles.filter(a=>articleFilter==="all"||normalizeAudience(a.target_audience)===articleFilter||normalizeAudience(a.target_audience)==="all");const filterLabel=articleFilter==="doctor"?"医師向けコンテンツ":articleFilter==="staff"?"事務向けコンテンツ":"記事コンテンツ";count.textContent=`${filterLabel}　${arr.length} 本`;if(!arr.length){grid.innerHTML='<div class="loading">該当する記事はまだありません。</div>';return;}grid.innerHTML=arr.map(a=>{const aud=normalizeAudience(a.target_audience),ok=canReadArticle(a),label=aud==="doctor"?"医師向け":aud==="staff"?"事務向け":"共通";return `<article class="article-card ${ok?"":"locked"}" onclick="openArticle('${a.id}')"><div class="article-meta"><span class="article-chip ${aud==="staff"?"staff":""}">${label}</span>${ok?"":'<span class="article-chip lock">🔒 タイトルのみ</span>'}</div><div class="article-title">${esc(a.title||"無題")}</div><div class="article-date">${a.published_at?fmtDate(a.published_at):""}</div>${ok?"":'<div class="article-lock-note">契約後に全文をお読みいただけます。</div>'}</article>`}).join("");}
+function openArticle(id){const a=allArticles.find(x=>String(x.id)===String(id));if(!a)return;if(!canReadArticle(a)){showLockModal();return;}const aud=normalizeAudience(a.target_audience),label=aud==="doctor"?"医師向け":aud==="staff"?"事務向け":"共通";document.getElementById("article-modal-title").textContent=a.title||"無題";document.getElementById("article-modal-meta").innerHTML=`<span class="article-chip ${aud==="staff"?"staff":""}">${label}</span>`;document.getElementById("article-modal-body").textContent=a.body||a.free_body||"本文が登録されていません。";const s=document.getElementById("article-modal-source");s.innerHTML="";document.getElementById("article-modal").style.display="flex";}
 function closeArticleModal(){document.getElementById("article-modal").style.display="none";}
 
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
