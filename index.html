@@ -2033,7 +2033,21 @@ const contractStatus=currentProfile?.contract_status||"未契約";
 let articleBody="";
 
 if(isAdmin || contractStatus==="契約中"){
-  const blocks = Array.isArray(a.notion_blocks) ? a.notion_blocks : [];
+ let blocks = [];
+
+if (Array.isArray(a.notion_blocks)) {
+  blocks = a.notion_blocks;
+} else if (typeof a.notion_blocks === "string") {
+  try {
+    const parsed = JSON.parse(a.notion_blocks);
+    if (Array.isArray(parsed)) blocks = parsed;
+  } catch (e) {
+    console.error("notion_blocks parse error:", e);
+  }
+}
+
+console.log("notion_blocks:", a.notion_blocks);
+console.log("parsed blocks:", blocks);
   if(blocks.length){
     document.getElementById("article-modal-body").innerHTML = renderNotionBlocks(blocks);
   }else{
