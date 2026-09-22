@@ -1833,7 +1833,7 @@ const {data,error}=
 await sb
 .from("articles")
 .select(
-"id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url"
+"id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url,notion_article_url"
 )
 .order(
 "published_at",
@@ -1958,8 +1958,13 @@ document.createElement(
 "div"
 );
 
+const notionUrl=getNotionArticleUrl(a);
+const locked=Boolean(notionUrl) && !canOpenContractArticle();
+
 card.className=
-"article-card";
+"article-card" +
+(notionUrl ? " notion-article" : "") +
+(locked ? " locked-article" : "");
 
 card.onclick=
 ()=>openArticle(a.id);
@@ -1974,6 +1979,9 @@ ${a.published_at
 ?fmtDate(a.published_at)
 :""}
 </div>
+${notionUrl ? (locked
+? '<div class="article-access-note">🔒 ご契約中の会員様向けです</div>'
+: '<div class="article-open-badge">Notionで記事を読む ↗</div>') : ''}
 `;
 
 grid.appendChild(card);
@@ -1992,6 +2000,16 @@ function openArticle(id){
 
 const a=allArticles.find(x=>String(x.id)===String(id));
 if(!a) return;
+
+const notionUrl=getNotionArticleUrl(a);
+if(notionUrl){
+  if(!canReadArticle(a) || !canOpenContractArticle()){
+    showLockModal();
+    return;
+  }
+  window.open(notionUrl,"_blank","noopener,noreferrer");
+  return;
+}
 
 if(!canReadArticle(a)){
   showLockModal();
