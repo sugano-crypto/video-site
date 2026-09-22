@@ -620,6 +620,34 @@ body.is-admin .card-delete-btn {
     padding:0 16px;
   }
 }
+
+/* 2026-09-22: Notion記事・バックナンバー表示 */
+.article-card.notion-article {
+  border-left:4px solid var(--sky);
+}
+.article-card.locked-article {
+  cursor:default;
+  background:#f7f9fc;
+}
+.article-card.locked-article h3 {
+  color:var(--gray-600);
+}
+.article-access-note {
+  margin-top:10px;
+  font-size:11px;
+  color:var(--gray-400);
+}
+.article-open-badge {
+  display:inline-block;
+  margin-top:10px;
+  padding:4px 9px;
+  border-radius:999px;
+  background:var(--sky-light);
+  color:var(--navy-mid);
+  font-size:11px;
+  font-weight:700;
+}
+
 </style>
 </head>
 
@@ -939,6 +967,37 @@ id="change-msg"></div>
 </div>
 
 <script>
+
+// ---- Notion記事リンク対応（2026-09-22） ----
+function getNotionArticleUrl(article) {
+  return String(
+    article?.notion_article_url ||
+    article?.notion_url ||
+    article?.notion_page_url ||
+    ""
+  ).trim();
+}
+
+function canOpenContractArticle() {
+  if (currentUser?.email === ADMIN_EMAIL) return true;
+  const status = String(currentProfile?.contract_status || "").trim();
+  return status === "契約中";
+}
+
+function openNotionArticle(article) {
+  const url = getNotionArticleUrl(article);
+  if (!url) return false;
+
+  if (!canOpenContractArticle()) {
+    if (typeof openLockModal === "function") openLockModal();
+    return true;
+  }
+
+  // Notion側のゲスト権限が最終的な閲覧制御になります。
+  window.open(url, "_blank", "noopener,noreferrer");
+  return true;
+}
+
 
 const SUPABASE_URL =
 "https://bicqctaxvponqbzjsjbw.supabase.co";
