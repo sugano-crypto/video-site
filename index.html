@@ -562,6 +562,26 @@ body.is-admin .card-delete-btn {
   padding:30px;
 }
 
+/* Notion cover image */
+.article-cover-wrap {
+  display:none;
+  margin:-30px -30px 24px;
+  overflow:hidden;
+  border-radius:16px 16px 0 0;
+  background:var(--gray-100);
+}
+
+.article-cover-wrap.show {
+  display:block;
+}
+
+.article-cover-image {
+  display:block;
+  width:100%;
+  max-height:360px;
+  object-fit:cover;
+}
+
 .article-modal-top {
   display:flex;
   justify-content:space-between;
@@ -878,6 +898,10 @@ onclick="showArticleMenu()">
 
 <div class="article-modal-card"
 onclick="event.stopPropagation()">
+
+<div id="article-cover-wrap" class="article-cover-wrap">
+<img id="article-cover-image" class="article-cover-image" src="" alt="">
+</div>
 
 <div class="article-modal-top">
 
@@ -1847,7 +1871,7 @@ const {data,error}=
 await sb
 .from("articles")
 .select(
-"id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url,notion_article_url,notion_blocks"
+"id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url,notion_article_url,notion_cover_url,notion_blocks"
 )
 .order(
 "published_at",
@@ -2025,6 +2049,21 @@ if(!canReadArticle(a)){
 
 document.getElementById("article-modal-title").textContent=a.title||"無題";
 
+const coverWrap=document.getElementById("article-cover-wrap");
+const coverImage=document.getElementById("article-cover-image");
+const coverUrl=String(a.notion_cover_url||"").trim();
+
+if(coverUrl){
+  coverImage.src=coverUrl;
+  coverImage.alt=(a.title||"記事")+" のカバー画像";
+  coverWrap.classList.add("show");
+}else{
+  coverImage.removeAttribute("src");
+  coverImage.alt="";
+  coverWrap.classList.remove("show");
+}
+
+
 const freeBody=String(a.free_body||"").trim();
 const paidBody=String(a.body||"").trim();
 const isAdmin=currentUser?.email===ADMIN_EMAIL;
@@ -2092,6 +2131,15 @@ function closeArticleModal(){
 document.getElementById(
 "article-modal"
 ).style.display="none";
+
+const coverWrap=document.getElementById("article-cover-wrap");
+const coverImage=document.getElementById("article-cover-image");
+
+if(coverWrap) coverWrap.classList.remove("show");
+if(coverImage){
+  coverImage.removeAttribute("src");
+  coverImage.alt="";
+}
 
 }
 
