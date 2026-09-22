@@ -648,6 +648,20 @@ body.is-admin .card-delete-btn {
   font-weight:700;
 }
 
+/* Notion viewer */
+.article-body { white-space: normal; }
+.article-body p { margin: 0 0 1em; }
+.article-body h2 { font-size: 1.55em; margin: 1.5em 0 .6em; color: var(--navy); }
+.article-body h3 { font-size: 1.3em; margin: 1.35em 0 .55em; color: var(--navy); }
+.article-body h4 { font-size: 1.12em; margin: 1.2em 0 .5em; }
+.article-body ul,.article-body ol { margin: .6em 0 1em 1.6em; }
+.article-body blockquote { margin: 1em 0; padding: .5em 1em; border-left: 4px solid var(--sky); background: var(--gray-100); }
+.article-body pre { overflow:auto; padding:14px; background:#f5f8fc; border-radius:8px; }
+.article-body code { font-family: monospace; }
+.notion-callout { margin:1em 0; padding:14px 16px; background:var(--sky-light); border-radius:10px; }
+.notion-image { max-width:100%; height:auto; border-radius:8px; margin:1em 0; }
+.article-body a { color:var(--sky); text-decoration:underline; overflow-wrap:anywhere; }
+
 </style>
 </head>
 
@@ -1833,7 +1847,7 @@ const {data,error}=
 await sb
 .from("articles")
 .select(
-"id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url,notion_article_url"
+"id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url,notion_article_url,notion_blocks"
 )
 .order(
 "published_at",
@@ -2081,6 +2095,41 @@ return String(s)
 
 }
 
+
+function renderNotionBlocks(blocks){
+  if(!Array.isArray(blocks) || !blocks.length) return "本文が登録されていません。";
+
+  const richText = (arr=[]) => arr.map(r => {
+    const text = esc(r?.plain_text ?? r?.text?.content ?? "");
+    const href = r?.href || r?.text?.link?.url;
+    let out = href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${text}</a>` : text;
+    const a=r?.annotations||{};
+    if(a.bold) out=`<strong>${out}</strong>`;
+    if(a.italic) out=`<em>${out}</em>`;
+    if(a.underline) out=`<u>${out}</u>`;
+    if(a.strikethrough) out=`<s>${out}</s>`;
+    if(a.code) out=`<code>${out}</code>`;
+    return out;
+  }).join("");
+
+  const render = b => {
+    const t=b?.type; const x=b?.[t]||{}; const txt=richText(x.rich_text);
+    if(t==="paragraph") return txt ? `<p>${txt}</p>` : `<p><br></p>`;
+    if(t==="heading_1") return `<h2>${txt}</h2>`;
+    if(t==="heading_2") return `<h3>${txt}</h3>`;
+    if(t==="heading_3") return `<h4>${txt}</h4>`;
+    if(t==="bulleted_list_item") return `<ul><li>${txt}</li></ul>`;
+    if(t==="numbered_list_item") return `<ol><li>${txt}</li></ol>`;
+    if(t==="quote") return `<blockquote>${txt}</blockquote>`;
+    if(t==="callout") return `<div class="notion-callout">${txt}</div>`;
+    if(t==="divider") return `<hr>`;
+    if(t==="code") return `<pre><code>${txt}</code></pre>`;
+    if(t==="image"){ const u=x?.file?.url||x?.external?.url; return u?`<img class="notion-image" src="${esc(u)}" alt="">`:""; }
+    if(t==="bookmark" && x.url) return `<p><a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.url)}</a></p>`;
+    return txt ? `<p>${txt}</p>` : "";
+  };
+  return blocks.map(render).join("");
+}
 
 function linkifyText(text){
 
