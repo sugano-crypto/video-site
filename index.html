@@ -682,6 +682,29 @@ body.is-admin .card-delete-btn {
 .notion-image { max-width:100%; height:auto; border-radius:8px; margin:1em 0; }
 .article-body a { color:var(--sky); text-decoration:underline; overflow-wrap:anywhere; }
 
+
+/* Notion audio player */
+.article-audio-wrap {
+  display:none;
+  margin:14px 0 22px;
+  padding:14px 16px;
+  background:var(--gray-100);
+  border:1px solid var(--gray-200);
+  border-radius:12px;
+}
+.article-audio-wrap.show { display:block; }
+.article-audio-label {
+  font-size:12px;
+  font-weight:700;
+  color:var(--gray-600);
+  margin-bottom:8px;
+}
+.article-audio-player {
+  display:block;
+  width:100%;
+  height:42px;
+}
+
 </style>
 </head>
 
@@ -913,6 +936,11 @@ id="article-modal-title"></div>
 <button class="article-close"
 onclick="closeArticleModal()">×</button>
 
+</div>
+
+<div id="article-audio-wrap" class="article-audio-wrap">
+  <div class="article-audio-label">🎧 今週のトピックスを音声で聴く</div>
+  <audio id="article-audio-player" class="article-audio-player" controls preload="metadata"></audio>
 </div>
 
 <div class="article-body"
@@ -1871,7 +1899,7 @@ const {data,error}=
 await sb
 .from("articles")
 .select(
-"id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url,notion_article_url,notion_cover_url,notion_blocks"
+"id,title,content_type,published_at,status,price,body,access_type,free_body,target_audience,note_url,notion_article_url,notion_cover_url,notion_audio_url,notion_blocks"
 )
 .order(
 "published_at",
@@ -2063,6 +2091,23 @@ if(coverUrl){
   coverWrap.classList.remove("show");
 }
 
+/* Notion audio */
+const audioWrap=document.getElementById("article-audio-wrap");
+const audioPlayer=document.getElementById("article-audio-player");
+const audioUrl=String(a.notion_audio_url||"").trim();
+
+if(audioUrl){
+  audioPlayer.src=audioUrl;
+  audioWrap.classList.add("show");
+}else{
+  audioPlayer.pause();
+  audioPlayer.removeAttribute("src");
+  audioPlayer.load();
+  audioWrap.classList.remove("show");
+}
+
+
+
 
 const freeBody=String(a.free_body||"").trim();
 const paidBody=String(a.body||"").trim();
@@ -2140,6 +2185,17 @@ if(coverImage){
   coverImage.removeAttribute("src");
   coverImage.alt="";
 }
+
+
+
+const audioWrap=document.getElementById("article-audio-wrap");
+const audioPlayer=document.getElementById("article-audio-player");
+if(audioPlayer){
+  audioPlayer.pause();
+  audioPlayer.removeAttribute("src");
+  audioPlayer.load();
+}
+if(audioWrap) audioWrap.classList.remove("show");
 
 }
 
