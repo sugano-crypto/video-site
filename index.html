@@ -1993,9 +1993,7 @@ ${a.published_at
 ?fmtDate(a.published_at)
 :""}
 </div>
-${notionUrl ? (locked
-? '<div class="article-access-note">🔒 ご契約中の会員様向けです</div>'
-: '<div class="article-open-badge">Notionで記事を読む ↗</div>') : ''}
+${locked ? '<div class="article-access-note">🔒 ご契約中の会員様向けです</div>' : ''}
 `;
 
 grid.appendChild(card);
@@ -2015,13 +2013,8 @@ function openArticle(id){
 const a=allArticles.find(x=>String(x.id)===String(id));
 if(!a) return;
 
-const notionUrl=getNotionArticleUrl(a);
-if(notionUrl){
-  if(!canReadArticle(a) || !canOpenContractArticle()){
-    showLockModal();
-    return;
-  }
-  window.open(notionUrl,"_blank","noopener,noreferrer");
+if(!canReadArticle(a) || !canOpenContractArticle()){
+  showLockModal();
   return;
 }
 
@@ -2040,12 +2033,16 @@ const contractStatus=currentProfile?.contract_status||"未契約";
 let articleBody="";
 
 if(isAdmin || contractStatus==="契約中"){
-  if(freeBody) articleBody+=freeBody;
-  if(freeBody && paidBody) articleBody+="\n\n";
-  if(paidBody) articleBody+=paidBody;
-
-  document.getElementById("article-modal-body").innerHTML=
-    linkifyText(articleBody || "本文が登録されていません。");
+  const blocks = Array.isArray(a.notion_blocks) ? a.notion_blocks : [];
+  if(blocks.length){
+    document.getElementById("article-modal-body").innerHTML = renderNotionBlocks(blocks);
+  }else{
+    if(freeBody) articleBody+=freeBody;
+    if(freeBody && paidBody) articleBody+="\n\n";
+    if(paidBody) articleBody+=paidBody;
+    document.getElementById("article-modal-body").innerHTML=
+      linkifyText(articleBody || "本文が登録されていません。");
+  }
 }else{
   document.getElementById("article-modal-body").innerHTML=
     linkifyText(freeBody || "この記事の無料公開部分はありません。");
