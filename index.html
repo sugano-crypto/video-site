@@ -736,6 +736,69 @@ body.is-admin .card-delete-btn {
   height:42px;
 }
 
+
+
+/* 2026-09-23: 記事ビューワー右側「過去のトピックス」 */
+.article-modal-card { position:relative; }
+.article-history-toggle {
+  position:fixed;
+  right:calc((100vw - min(860px, calc(100vw - 48px))) / 2 - 1px);
+  top:50%;
+  transform:translateY(-50%);
+  z-index:270;
+  border:1px solid var(--gray-200);
+  border-right:none;
+  background:var(--navy);
+  color:#fff;
+  border-radius:10px 0 0 10px;
+  padding:14px 9px;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:700;
+  line-height:1.5;
+  writing-mode:vertical-rl;
+  letter-spacing:.05em;
+  box-shadow:0 4px 14px rgba(26,58,92,.18);
+}
+.article-history-panel {
+  position:fixed;
+  top:6vh;
+  right:calc((100vw - min(860px, calc(100vw - 48px))) / 2);
+  width:min(340px,82vw);
+  height:88vh;
+  z-index:269;
+  background:#fff;
+  border-radius:14px 0 0 14px;
+  box-shadow:-10px 0 30px rgba(26,58,92,.16);
+  transform:translateX(calc(100% + 30px));
+  opacity:0;
+  pointer-events:none;
+  transition:transform .22s ease,opacity .22s ease;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.article-history-panel.show { transform:translateX(0); opacity:1; pointer-events:auto; }
+.article-history-head {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:18px 18px 14px; border-bottom:1px solid var(--gray-200);
+  color:var(--navy); font-size:16px; font-weight:700;
+}
+.article-history-close { border:none; background:var(--gray-100); border-radius:8px; padding:6px 10px; cursor:pointer; }
+.article-history-list { overflow:auto; padding:8px 10px 16px; }
+.article-history-item {
+  width:100%; text-align:left; border:none; background:#fff; color:var(--navy);
+  padding:13px 10px; border-bottom:1px solid var(--gray-200); cursor:pointer;
+  font:inherit; font-size:13px; font-weight:700; line-height:1.65;
+}
+.article-history-item:hover { background:var(--gray-100); }
+.article-history-item.current { background:var(--sky-light); }
+.article-history-empty { padding:18px 10px; color:var(--gray-400); font-size:13px; }
+@media(max-width:600px) {
+  .article-history-toggle { right:0; top:auto; bottom:22px; transform:none; writing-mode:horizontal-tb; border-right:1px solid var(--gray-200); border-radius:10px 0 0 10px; padding:10px 12px; }
+  .article-history-panel { top:0; right:0; width:min(88vw,360px); height:100dvh; border-radius:0; }
+}
+
 </style>
 </head>
 
@@ -979,6 +1042,16 @@ id="article-modal-body"></div>
 
 <div class="article-source"
 id="article-modal-source"></div>
+
+<button id="article-history-toggle" class="article-history-toggle" type="button" onclick="toggleArticleHistory(event)">過去のトピックス</button>
+<div id="article-history-panel" class="article-history-panel" onclick="event.stopPropagation()">
+  <div class="article-history-head">
+    <span>過去のトピックス</span>
+    <button class="article-history-close" type="button" onclick="closeArticleHistory()">×</button>
+  </div>
+  <div id="article-history-list" class="article-history-list"></div>
+</div>
+
 
 </div>
 </div>
@@ -2091,7 +2164,51 @@ grid.appendChild(card);
    free_body → body の順番で両方表示
    ========================================== */
 
+
+let currentArticleId = null;
+
+function getTopicViewerArticles(){
+  return allArticles
+    .filter(a => String(a.notion_article_url || "").trim())
+    .filter(a => canReadArticle(a))
+    .sort((a,b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
+}
+
+function renderArticleHistory(){
+  const list=document.getElementById("article-history-list");
+  if(!list) return;
+  const items=getTopicViewerArticles();
+  if(!items.length){
+    list.innerHTML='<div class="article-history-empty">過去のトピックスはまだありません。</div>';
+    return;
+  }
+  list.innerHTML=items.map(a=>`
+    <button type="button" class="article-history-item ${String(a.id)===String(currentArticleId)?"current":""}"
+      onclick="openArticleFromHistory('${esc(String(a.id))}')">${esc(a.title||"無題")}</button>
+  `).join("");
+}
+
+function toggleArticleHistory(event){
+  if(event) event.stopPropagation();
+  const panel=document.getElementById("article-history-panel");
+  if(!panel) return;
+  panel.classList.toggle("show");
+  if(panel.classList.contains("show")) renderArticleHistory();
+}
+
+function closeArticleHistory(){
+  const panel=document.getElementById("article-history-panel");
+  if(panel) panel.classList.remove("show");
+}
+
+function openArticleFromHistory(id){
+  closeArticleHistory();
+  openArticle(id);
+}
+
 function openArticle(id){
+
+currentArticleId=id;
 
 const a=allArticles.find(x=>String(x.id)===String(id));
 if(!a) return;
@@ -2203,6 +2320,9 @@ document.getElementById("article-modal").style.display="flex";
 }
 
 function closeArticleModal(){
+
+closeArticleHistory();
+currentArticleId=null;
 
 document.getElementById(
 "article-modal"
