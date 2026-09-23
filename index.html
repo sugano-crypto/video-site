@@ -624,6 +624,37 @@ body.is-admin .card-delete-btn {
 }
 
 @media(max-width:600px) {
+  #article-modal {
+    padding:0;
+    align-items:stretch;
+  }
+
+  .article-modal-card {
+    width:100%;
+    max-height:100dvh;
+    min-height:100dvh;
+    border-radius:0;
+    padding:20px 18px 28px;
+  }
+
+  .article-cover-wrap {
+    margin:-20px -18px 20px;
+    border-radius:0;
+  }
+
+  .article-cover-image {
+    max-height:260px;
+  }
+
+  .article-modal-title {
+    font-size:19px;
+  }
+
+  .article-body {
+    font-size:14px;
+    line-height:1.9;
+  }
+
   .video-grid {
     grid-template-columns:1fr;
   }
@@ -2139,11 +2170,11 @@ console.log("parsed blocks:", blocks);
     if(freeBody && paidBody) articleBody+="\n\n";
     if(paidBody) articleBody+=paidBody;
     document.getElementById("article-modal-body").innerHTML=
-      linkifyText(articleBody || "本文が登録されていません。");
+      linkifyText(stripDuplicateAudioGuideFromText(articleBody) || "本文が登録されていません。");
   }
 }else{
   document.getElementById("article-modal-body").innerHTML=
-    linkifyText(freeBody || "この記事の無料公開部分はありません。");
+    linkifyText(stripDuplicateAudioGuideFromText(freeBody) || "この記事の無料公開部分はありません。");
 }
 
 const source=document.getElementById("article-modal-source");
@@ -2211,6 +2242,23 @@ return String(s)
 }
 
 
+function isDuplicateAudioGuideText(text){
+  const normalized=String(text||"")
+    .replace(/\s+/g," ")
+    .trim();
+
+  // 上部に実プレーヤーを表示するため、Notion本文側の案内文は重複表示しない。
+  return /^(?:🎧\s*)?今週のトピックスを音声で聴く(?:\s*[（(]?[0-9０-９]+[:：][0-9０-９]+[）)]?)?\s*$/.test(normalized);
+}
+
+function stripDuplicateAudioGuideFromText(text){
+  return String(text||"")
+    .split(/\r?\n/)
+    .filter(line=>!isDuplicateAudioGuideText(line))
+    .join("\n")
+    .trim();
+}
+
 function renderNotionBlocks(blocks){
   if(!Array.isArray(blocks) || !blocks.length) return "本文が登録されていません。";
 
@@ -2229,6 +2277,8 @@ function renderNotionBlocks(blocks){
 
   const render = b => {
     const t=b?.type; const x=b?.[t]||{}; const txt=richText(x.rich_text);
+    const plain=(x.rich_text||[]).map(r=>r?.plain_text ?? r?.text?.content ?? "").join("");
+    if(isDuplicateAudioGuideText(plain)) return "";
     if(t==="paragraph") return txt ? `<p>${txt}</p>` : `<p><br></p>`;
     if(t==="heading_1") return `<h2>${txt}</h2>`;
     if(t==="heading_2") return `<h3>${txt}</h3>`;
