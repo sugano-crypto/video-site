@@ -1,3 +1,4 @@
+```
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -738,14 +739,14 @@ body.is-admin .card-delete-btn {
 
 
 
-/* 2026-09-23: 記事ビューワー右側「過去のトピックス」 */
-.article-modal-card { position:relative; }
+/* 2026-09-23: 記事一覧専用「過去のトピックス」 */
 .article-history-toggle {
+  display:none;
   position:fixed;
-  right:calc((100vw - min(860px, calc(100vw - 48px))) / 2 - 1px);
+  right:0;
   top:50%;
   transform:translateY(-50%);
-  z-index:270;
+  z-index:220;
   border:1px solid var(--gray-200);
   border-right:none;
   background:var(--navy);
@@ -760,17 +761,18 @@ body.is-admin .card-delete-btn {
   letter-spacing:.05em;
   box-shadow:0 4px 14px rgba(26,58,92,.18);
 }
+.article-history-toggle.show { display:block; }
+
 .article-history-panel {
   position:fixed;
-  top:6vh;
-  right:calc((100vw - min(860px, calc(100vw - 48px))) / 2);
-  width:min(340px,82vw);
-  height:88vh;
-  z-index:269;
+  top:60px;
+  right:0;
+  width:min(360px,88vw);
+  height:calc(100vh - 60px);
+  z-index:219;
   background:#fff;
-  border-radius:14px 0 0 14px;
   box-shadow:-10px 0 30px rgba(26,58,92,.16);
-  transform:translateX(calc(100% + 30px));
+  transform:translateX(100%);
   opacity:0;
   pointer-events:none;
   transition:transform .22s ease,opacity .22s ease;
@@ -778,25 +780,67 @@ body.is-admin .card-delete-btn {
   flex-direction:column;
   overflow:hidden;
 }
-.article-history-panel.show { transform:translateX(0); opacity:1; pointer-events:auto; }
-.article-history-head {
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-  padding:18px 18px 14px; border-bottom:1px solid var(--gray-200);
-  color:var(--navy); font-size:16px; font-weight:700;
+.article-history-panel.show {
+  transform:translateX(0);
+  opacity:1;
+  pointer-events:auto;
 }
-.article-history-close { border:none; background:var(--gray-100); border-radius:8px; padding:6px 10px; cursor:pointer; }
-.article-history-list { overflow:auto; padding:8px 10px 16px; }
+.article-history-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:18px;
+  border-bottom:1px solid var(--gray-200);
+  color:var(--navy);
+  font-size:16px;
+  font-weight:700;
+}
+.article-history-close {
+  border:none;
+  background:var(--gray-100);
+  border-radius:8px;
+  padding:6px 10px;
+  cursor:pointer;
+}
+.article-history-list {
+  overflow:auto;
+  padding:8px 10px 16px;
+}
 .article-history-item {
-  width:100%; text-align:left; border:none; background:#fff; color:var(--navy);
-  padding:13px 10px; border-bottom:1px solid var(--gray-200); cursor:pointer;
-  font:inherit; font-size:13px; font-weight:700; line-height:1.65;
+  width:100%;
+  text-align:left;
+  border:none;
+  background:#fff;
+  color:var(--navy);
+  padding:13px 10px;
+  border-bottom:1px solid var(--gray-200);
+  cursor:pointer;
+  font:inherit;
+  font-size:13px;
+  font-weight:700;
+  line-height:1.65;
 }
 .article-history-item:hover { background:var(--gray-100); }
-.article-history-item.current { background:var(--sky-light); }
-.article-history-empty { padding:18px 10px; color:var(--gray-400); font-size:13px; }
+.article-history-empty {
+  padding:18px 10px;
+  color:var(--gray-400);
+  font-size:13px;
+}
 @media(max-width:600px) {
-  .article-history-toggle { right:0; top:auto; bottom:22px; transform:none; writing-mode:horizontal-tb; border-right:1px solid var(--gray-200); border-radius:10px 0 0 10px; padding:10px 12px; }
-  .article-history-panel { top:0; right:0; width:min(88vw,360px); height:100dvh; border-radius:0; }
+  .article-history-toggle {
+    top:auto;
+    bottom:22px;
+    transform:none;
+    writing-mode:horizontal-tb;
+    border-right:1px solid var(--gray-200);
+    padding:10px 12px;
+  }
+  .article-history-panel {
+    top:60px;
+    height:calc(100dvh - 60px);
+    width:min(88vw,360px);
+  }
 }
 
 </style>
@@ -1042,18 +1086,19 @@ id="article-modal-body"></div>
 
 <div class="article-source"
 id="article-modal-source"></div>
+</div>
+</div>
 
-<button id="article-history-toggle" class="article-history-toggle" type="button" onclick="toggleArticleHistory(event)">過去のトピックス</button>
-<div id="article-history-panel" class="article-history-panel" onclick="event.stopPropagation()">
+<!-- 記事一覧専用：過去のトピックス -->
+<button id="article-history-toggle" class="article-history-toggle" type="button"
+onclick="toggleArticleHistory(event)">過去のトピックス</button>
+
+<div id="article-history-panel" class="article-history-panel">
   <div class="article-history-head">
     <span>過去のトピックス</span>
     <button class="article-history-close" type="button" onclick="closeArticleHistory()">×</button>
   </div>
   <div id="article-history-list" class="article-history-list"></div>
-</div>
-
-
-</div>
 </div>
 
 <!-- 制限モーダル -->
@@ -1877,6 +1922,8 @@ type==="articles"
 )
 .classList.add("active");
 
+setTimeout(updateArticleHistoryVisibility,0);
+
 if(type==="articles"){
 
 const isAdmin=
@@ -2048,6 +2095,8 @@ shouldShowArticle
 );
 
 renderArticles();
+renderArticleHistory();
+updateArticleHistoryVisibility();
 
 }
 
@@ -2167,6 +2216,8 @@ grid.appendChild(card);
 
 let currentArticleId = null;
 
+/* 過去のトピックス：
+   Notionビューワー対象の記事タイトルだけを一覧表示 */
 function getTopicViewerArticles(){
   return allArticles
     .filter(a => String(a.notion_article_url || "").trim())
@@ -2178,14 +2229,33 @@ function renderArticleHistory(){
   const list=document.getElementById("article-history-list");
   if(!list) return;
   const items=getTopicViewerArticles();
+
   if(!items.length){
     list.innerHTML='<div class="article-history-empty">過去のトピックスはまだありません。</div>';
     return;
   }
+
   list.innerHTML=items.map(a=>`
-    <button type="button" class="article-history-item ${String(a.id)===String(currentArticleId)?"current":""}"
+    <button type="button" class="article-history-item"
       onclick="openArticleFromHistory('${esc(String(a.id))}')">${esc(a.title||"無題")}</button>
   `).join("");
+}
+
+function updateArticleHistoryVisibility(){
+  const toggle=document.getElementById("article-history-toggle");
+  const articlePanel=document.getElementById("panel-articles");
+  const modal=document.getElementById("article-modal");
+  if(!toggle || !articlePanel) return;
+
+  const articlesActive=articlePanel.classList.contains("active");
+  const modalOpen=modal && modal.style.display==="flex";
+
+  /* 記事コンテンツ選択中、かつ記事本文を開いていない時だけ表示 */
+  toggle.classList.toggle("show", articlesActive && !modalOpen);
+
+  if(!articlesActive || modalOpen){
+    closeArticleHistory();
+  }
 }
 
 function toggleArticleHistory(event){
@@ -2209,6 +2279,9 @@ function openArticleFromHistory(id){
 function openArticle(id){
 
 currentArticleId=id;
+closeArticleHistory();
+const historyToggle=document.getElementById("article-history-toggle");
+if(historyToggle) historyToggle.classList.remove("show");
 
 const a=allArticles.find(x=>String(x.id)===String(id));
 if(!a) return;
@@ -2348,6 +2421,8 @@ if(audioPlayer){
 }
 if(audioWrap) audioWrap.classList.remove("show");
 
+
+updateArticleHistoryVisibility();
 }
 
 
@@ -2535,3 +2610,4 @@ doLogin();
 
 </body>
 </html>
+```
