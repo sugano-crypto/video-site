@@ -738,108 +738,99 @@ body.is-admin .card-delete-btn {
 
 
 
-/* 2026-09-23: 記事一覧専用「過去のトピックス」 */
-.article-history-toggle {
-  display:none;
-  position:fixed;
-  right:0;
-  top:50%;
-  transform:translateY(-50%);
-  z-index:9999;
-  border:1px solid var(--gray-200);
-  border-right:none;
-  background:var(--navy);
-  color:#fff;
-  border-radius:10px 0 0 10px;
-  padding:14px 9px;
-  cursor:pointer;
-  font-size:12px;
-  font-weight:700;
-  line-height:1.5;
-  writing-mode:vertical-rl;
-  letter-spacing:.05em;
-  box-shadow:0 4px 14px rgba(26,58,92,.18);
+/* 2026-09-23: 過去のトピックス・週別索引 */
+.article-content-layout {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 310px;
+  gap:24px;
+  align-items:start;
 }
-.article-history-toggle.show { display:block; }
+.article-main-column { min-width:0; }
 
-.article-history-panel {
-  position:fixed;
-  top:60px;
-  right:0;
-  width:min(360px,88vw);
-  height:calc(100vh - 60px);
-  z-index:9998;
+.topic-index {
+  display:none;
+  position:sticky;
+  top:84px;
   background:#fff;
-  box-shadow:-10px 0 30px rgba(26,58,92,.16);
-  transform:translateX(100%);
-  opacity:0;
-  pointer-events:none;
-  transition:transform .22s ease,opacity .22s ease;
-  display:flex;
-  flex-direction:column;
+  border:1px solid var(--gray-200);
+  border-radius:12px;
   overflow:hidden;
+  box-shadow:0 2px 10px rgba(26,58,92,.05);
 }
-.article-history-panel.show {
-  transform:translateX(0);
-  opacity:1;
-  pointer-events:auto;
-}
-.article-history-head {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:18px;
-  border-bottom:1px solid var(--gray-200);
-  color:var(--navy);
-  font-size:16px;
+.topic-index.show { display:block; }
+.topic-index-title {
+  padding:15px 16px;
+  font-size:14px;
   font-weight:700;
-}
-.article-history-close {
-  border:none;
+  color:var(--navy);
+  border-bottom:1px solid var(--gray-200);
   background:var(--gray-100);
-  border-radius:8px;
-  padding:6px 10px;
-  cursor:pointer;
 }
-.article-history-list {
+.topic-index-list {
+  max-height:calc(100vh - 150px);
   overflow:auto;
-  padding:8px 10px 16px;
+  padding:4px 0;
 }
-.article-history-item {
+.topic-week { border-bottom:1px solid var(--gray-200); }
+.topic-week:last-child { border-bottom:none; }
+.topic-week-date {
   width:100%;
-  text-align:left;
-  border:none;
+  border:0;
   background:#fff;
   color:var(--navy);
-  padding:13px 10px;
-  border-bottom:1px solid var(--gray-200);
-  cursor:pointer;
+  text-align:left;
+  padding:12px 15px;
   font:inherit;
   font-size:13px;
   font-weight:700;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.topic-week-date:hover { background:var(--gray-100); }
+.topic-week-arrow {
+  width:14px;
+  flex:0 0 14px;
+  color:var(--gray-600);
+}
+.topic-week-items {
+  display:none;
+  padding:0 12px 10px 36px;
+}
+.topic-week.open .topic-week-items { display:block; }
+.topic-title-link {
+  display:block;
+  width:100%;
+  border:0;
+  background:transparent;
+  text-align:left;
+  color:var(--text);
+  padding:7px 0;
+  font:inherit;
+  font-size:12px;
+  font-weight:400;
   line-height:1.65;
+  cursor:pointer;
 }
-.article-history-item:hover { background:var(--gray-100); }
-.article-history-empty {
-  padding:18px 10px;
+.topic-title-link:hover {
+  color:var(--navy-mid);
+  text-decoration:underline;
+}
+.topic-index-empty {
+  padding:16px;
   color:var(--gray-400);
-  font-size:13px;
+  font-size:12px;
+  line-height:1.7;
 }
-@media(max-width:600px) {
-  .article-history-toggle {
-    top:auto;
-    bottom:22px;
-    transform:none;
-    writing-mode:horizontal-tb;
-    border-right:1px solid var(--gray-200);
-    padding:10px 12px;
+@media(max-width:900px) {
+  .article-content-layout { grid-template-columns:1fr; }
+  .topic-index {
+    position:static;
+    order:-1;
+    margin-bottom:18px;
   }
-  .article-history-panel {
-    top:60px;
-    height:calc(100dvh - 60px);
-    width:min(88vw,360px);
-  }
+  .topic-index-list { max-height:none; }
 }
 
 </style>
@@ -1008,45 +999,54 @@ onclick="switchContent('videos',this)">
 <!-- 記事 -->
 <div id="panel-articles" class="content-panel active">
 
-<section>
+<div class="article-content-layout">
 
-<div class="section-header">
-<div class="section-title" id="article-count">
-記事を読み込んでいます...
+  <div class="article-main-column">
+    <section>
+
+      <div class="section-header">
+        <div class="section-title" id="article-count">
+          記事を読み込んでいます...
+        </div>
+      </div>
+
+      <div id="article-menu" class="article-menu">
+
+        <button class="article-menu-card"
+        onclick="openArticleCategory('doctor')">
+          <h3>🩺 医師向けコンテンツ</h3>
+          <p>開業・経営・患者獲得など、医師向けの記事をまとめています。</p>
+        </button>
+
+        <button class="article-menu-card"
+        onclick="openArticleCategory('staff')">
+          <h3>🏥 事務向けコンテンツ</h3>
+          <p>医療・介護最新トピックス、制度・経営情報などをまとめています。</p>
+        </button>
+
+      </div>
+
+      <button id="article-back"
+      class="article-back"
+      onclick="showArticleMenu()">
+        ← 記事コンテンツの目次へ戻る
+      </button>
+
+      <div class="article-grid" id="article-grid">
+        <div class="loading">読み込み中...</div>
+      </div>
+
+    </section>
+  </div>
+
+  <aside id="topic-index" class="topic-index" aria-label="過去のトピックス">
+    <div class="topic-index-title">過去のトピックス</div>
+    <div id="topic-index-list" class="topic-index-list">
+      <div class="topic-index-empty">読み込み中...</div>
+    </div>
+  </aside>
+
 </div>
-</div>
-
-<div id="article-menu" class="article-menu">
-
-<button class="article-menu-card"
-onclick="openArticleCategory('doctor')">
-<h3>🩺 医師向けコンテンツ</h3>
-<p>
-開業・経営・患者獲得など、医師向けの記事をまとめています。
-</p>
-</button>
-
-<button class="article-menu-card"
-onclick="openArticleCategory('staff')">
-<h3>🏥 事務向けコンテンツ</h3>
-<p>
-医療・介護最新トピックス、制度・経営情報などをまとめています。
-</p>
-</button>
-
-</div>
-
-<button id="article-back"
-class="article-back"
-onclick="showArticleMenu()">
-← 記事コンテンツの目次へ戻る
-</button>
-
-<div class="article-grid" id="article-grid">
-<div class="loading">読み込み中...</div>
-</div>
-
-</section>
 
 </div>
 
@@ -1086,18 +1086,6 @@ id="article-modal-body"></div>
 <div class="article-source"
 id="article-modal-source"></div>
 </div>
-</div>
-
-<!-- 記事一覧専用：過去のトピックス -->
-<button id="article-history-toggle" class="article-history-toggle" type="button"
-onclick="toggleArticleHistory(event)">過去のトピックス</button>
-
-<div id="article-history-panel" class="article-history-panel">
-  <div class="article-history-head">
-    <span>過去のトピックス</span>
-    <button class="article-history-close" type="button" onclick="closeArticleHistory()">×</button>
-  </div>
-  <div id="article-history-list" class="article-history-list"></div>
 </div>
 
 <!-- 制限モーダル -->
@@ -1921,7 +1909,7 @@ type==="articles"
 )
 .classList.add("active");
 
-setTimeout(updateArticleHistoryVisibility,0);
+updateTopicIndexVisibility();
 
 if(type==="articles"){
 
@@ -2094,8 +2082,8 @@ shouldShowArticle
 );
 
 renderArticles();
-renderArticleHistory();
-updateArticleHistoryVisibility();
+renderTopicIndex();
+updateTopicIndexVisibility();
 
 }
 
@@ -2215,8 +2203,6 @@ grid.appendChild(card);
 
 let currentArticleId = null;
 
-/* 過去のトピックス：
-   Notionビューワー対象の記事タイトルだけを一覧表示 */
 function getTopicViewerArticles(){
   return allArticles
     .filter(a => String(a.notion_article_url || "").trim())
@@ -2224,80 +2210,113 @@ function getTopicViewerArticles(){
     .sort((a,b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
 }
 
-function renderArticleHistory(){
-  const list=document.getElementById("article-history-list");
-  if(!list) return;
-  const items=getTopicViewerArticles();
+function getArticleBlocks(article){
+  if(Array.isArray(article?.notion_blocks)) return article.notion_blocks;
+  if(typeof article?.notion_blocks==="string"){
+    try{
+      const parsed=JSON.parse(article.notion_blocks);
+      return Array.isArray(parsed) ? parsed : [];
+    }catch(e){
+      return [];
+    }
+  }
+  return [];
+}
 
-  if(!items.length){
-    list.innerHTML='<div class="article-history-empty">過去のトピックスはまだありません。</div>';
+/* Notion本文の見出しから、その週の各トピック名を抽出。
+   現在の記事構造では heading_1 / heading_2 を優先し、
+   「今週のトピックス」「音声で聴く」等の案内見出しは除外する。 */
+function extractTopicTitles(article){
+  const blocks=getArticleBlocks(article);
+  const candidates=[];
+
+  blocks.forEach(b=>{
+    const type=String(b?.type||"");
+    if(!["heading_1","heading_2"].includes(type)) return;
+    const rich=b?.[type]?.rich_text || [];
+    const title=rich.map(r=>r?.plain_text ?? r?.text?.content ?? "").join("").trim();
+    if(!title) return;
+    if(/今週のトピックスを音声で聴く/.test(title)) return;
+    if(/^今週の(?:医療・介護)?トピックス$/i.test(title)) return;
+    candidates.push(title);
+  });
+
+  return candidates;
+}
+
+function renderTopicIndex(){
+  const box=document.getElementById("topic-index");
+  const list=document.getElementById("topic-index-list");
+  if(!box || !list) return;
+
+  const articles=getTopicViewerArticles();
+  box.classList.add("show");
+
+  if(!articles.length){
+    list.innerHTML='<div class="topic-index-empty">過去のトピックスはまだありません。</div>';
     return;
   }
 
-  list.innerHTML=items.map(a=>`
-    <button type="button" class="article-history-item"
-      onclick="openArticleFromHistory('${esc(String(a.id))}')">${esc(a.title||"無題")}</button>
-  `).join("");
+  list.innerHTML=articles.map((a,index)=>{
+    const topics=extractTopicTitles(a);
+    const topicHtml=topics.length
+      ? topics.map((title,i)=>`
+          <button type="button" class="topic-title-link"
+            onclick="openTopicFromIndex('${esc(String(a.id))}',${i})">${esc(title)}</button>
+        `).join("")
+      : '<div class="topic-index-empty">トピック見出しを取得できませんでした。</div>';
+
+    return `
+      <div class="topic-week ${index===0 ? "open" : ""}" data-article-id="${esc(String(a.id))}">
+        <button type="button" class="topic-week-date" onclick="toggleTopicWeek(this)">
+          <span class="topic-week-arrow">${index===0 ? "▼" : "▶"}</span>
+          <span>${fmtDate(a.published_at)}</span>
+        </button>
+        <div class="topic-week-items">${topicHtml}</div>
+      </div>
+    `;
+  }).join("");
 }
 
-function updateArticleHistoryVisibility(){
-  const toggle=document.getElementById("article-history-toggle");
+function toggleTopicWeek(btn){
+  const week=btn.closest(".topic-week");
+  if(!week) return;
+  const open=!week.classList.contains("open");
+  week.classList.toggle("open",open);
+  const arrow=btn.querySelector(".topic-week-arrow");
+  if(arrow) arrow.textContent=open ? "▼" : "▶";
+}
+
+function openTopicFromIndex(articleId,topicIndex){
+  openArticle(articleId);
+
+  /* モーダル描画後、同じ順番の見出しまでスクロール */
+  setTimeout(()=>{
+    const body=document.getElementById("article-modal-body");
+    if(!body) return;
+    const headings=[...body.querySelectorAll("h2,h3")].filter(h=>{
+      const t=(h.textContent||"").trim();
+      return t &&
+        !/今週のトピックスを音声で聴く/.test(t) &&
+        !/^今週の(?:医療・介護)?トピックス$/i.test(t);
+    });
+    const target=headings[topicIndex];
+    if(target) target.scrollIntoView({behavior:"smooth",block:"start"});
+  },120);
+}
+
+function updateTopicIndexVisibility(){
+  const box=document.getElementById("topic-index");
   const articlePanel=document.getElementById("panel-articles");
-  const modal=document.getElementById("article-modal");
-  if(!toggle || !articlePanel) return;
-
+  if(!box || !articlePanel) return;
   const articlesActive=articlePanel.classList.contains("active");
-  const modalOpen=modal && modal.style.display==="flex";
-
-  /* 記事コンテンツ選択中、かつ記事本文を開いていない時だけ表示 */
-  toggle.classList.toggle("show", articlesActive && !modalOpen);
-
-  if(!articlesActive || modalOpen){
-    closeArticleHistory();
-  }
-}
-
-function toggleArticleHistory(event){
-  if(event) event.stopPropagation();
-  const panel=document.getElementById("article-history-panel");
-  const btn=document.getElementById("article-history-toggle");
-  if(!panel) return;
-
-  const willOpen=!panel.classList.contains("show");
-  panel.classList.toggle("show", willOpen);
-
-  // CSSキャッシュ等があっても確実に開閉するためのフォールバック
-  panel.style.transform=willOpen ? "translateX(0)" : "translateX(100%)";
-  panel.style.opacity=willOpen ? "1" : "0";
-  panel.style.pointerEvents=willOpen ? "auto" : "none";
-
-  if(btn) btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
-  if(willOpen) renderArticleHistory();
-}
-
-function closeArticleHistory(){
-  const panel=document.getElementById("article-history-panel");
-  const btn=document.getElementById("article-history-toggle");
-  if(panel){
-    panel.classList.remove("show");
-    panel.style.transform="translateX(100%)";
-    panel.style.opacity="0";
-    panel.style.pointerEvents="none";
-  }
-  if(btn) btn.setAttribute("aria-expanded","false");
-}
-
-function openArticleFromHistory(id){
-  closeArticleHistory();
-  openArticle(id);
+  box.classList.toggle("show",articlesActive);
+  if(articlesActive) renderTopicIndex();
 }
 
 function openArticle(id){
 
 currentArticleId=id;
-closeArticleHistory();
-const historyToggle=document.getElementById("article-history-toggle");
-if(historyToggle) historyToggle.classList.remove("show");
 
 const a=allArticles.find(x=>String(x.id)===String(id));
 if(!a) return;
@@ -2410,7 +2429,6 @@ document.getElementById("article-modal").style.display="flex";
 
 function closeArticleModal(){
 
-closeArticleHistory();
 currentArticleId=null;
 
 document.getElementById(
@@ -2437,8 +2455,6 @@ if(audioPlayer){
 }
 if(audioWrap) audioWrap.classList.remove("show");
 
-
-updateArticleHistoryVisibility();
 }
 
 
