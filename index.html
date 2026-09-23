@@ -1,4 +1,3 @@
-```
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -746,7 +745,7 @@ body.is-admin .card-delete-btn {
   right:0;
   top:50%;
   transform:translateY(-50%);
-  z-index:220;
+  z-index:9999;
   border:1px solid var(--gray-200);
   border-right:none;
   background:var(--navy);
@@ -769,7 +768,7 @@ body.is-admin .card-delete-btn {
   right:0;
   width:min(360px,88vw);
   height:calc(100vh - 60px);
-  z-index:219;
+  z-index:9998;
   background:#fff;
   box-shadow:-10px 0 30px rgba(26,58,92,.16);
   transform:translateX(100%);
@@ -2261,14 +2260,31 @@ function updateArticleHistoryVisibility(){
 function toggleArticleHistory(event){
   if(event) event.stopPropagation();
   const panel=document.getElementById("article-history-panel");
+  const btn=document.getElementById("article-history-toggle");
   if(!panel) return;
-  panel.classList.toggle("show");
-  if(panel.classList.contains("show")) renderArticleHistory();
+
+  const willOpen=!panel.classList.contains("show");
+  panel.classList.toggle("show", willOpen);
+
+  // CSSキャッシュ等があっても確実に開閉するためのフォールバック
+  panel.style.transform=willOpen ? "translateX(0)" : "translateX(100%)";
+  panel.style.opacity=willOpen ? "1" : "0";
+  panel.style.pointerEvents=willOpen ? "auto" : "none";
+
+  if(btn) btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+  if(willOpen) renderArticleHistory();
 }
 
 function closeArticleHistory(){
   const panel=document.getElementById("article-history-panel");
-  if(panel) panel.classList.remove("show");
+  const btn=document.getElementById("article-history-toggle");
+  if(panel){
+    panel.classList.remove("show");
+    panel.style.transform="translateX(100%)";
+    panel.style.opacity="0";
+    panel.style.pointerEvents="none";
+  }
+  if(btn) btn.setAttribute("aria-expanded","false");
 }
 
 function openArticleFromHistory(id){
@@ -2610,4 +2626,3 @@ doLogin();
 
 </body>
 </html>
-```
