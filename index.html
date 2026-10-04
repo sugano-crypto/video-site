@@ -2205,7 +2205,9 @@ let currentArticleId = null;
 
 function getTopicViewerArticles(){
   return allArticles
-    .filter(a => String(a.notion_article_url || "").trim())
+    /* Notion記事URLが未設定でも、同期済みの本文ブロックがあれば
+       「過去のトピックス」に表示する。 */
+    .filter(a => getArticleBlocks(a).length > 0)
     .filter(a => canReadArticle(a))
     .sort((a,b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
 }
@@ -2248,6 +2250,21 @@ function extractTopicTitles(article){
     const m=title.match(/^([1-9１-９])\s*[\.．、]\s*(.+)$/);
     if(m){
       topics.push(`${m[1]}. ${m[2].trim()}`);
+      continue;
+    }
+
+    /* 今週号のように、トピック見出しを
+       太字の「【見出し】」で作成している記事にも対応する。 */
+    const bracketHeading=title.match(/^【(.+?)】$/);
+    const hasBold=rich.some(r=>Boolean(r?.annotations?.bold));
+    if(type==="paragraph" && bracketHeading && hasBold){
+      const headingText=bracketHeading[1].trim();
+      const isDetailHeading=
+        /すがCon.?s Insight|コラム|参考資料|音声/.test(headingText);
+
+      if(headingText && !isDetailHeading){
+        topics.push(`${topics.length+1}. ${headingText}`);
+      }
       continue;
     }
 
