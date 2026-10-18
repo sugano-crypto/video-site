@@ -700,7 +700,10 @@ body.is-admin .card-delete-btn {
 }
 
 /* Notion viewer */
-.article-body { white-space: normal; }
+.article-body { white-space: normal; overflow-wrap: anywhere; }
+.article-body p, .article-body li, .article-body blockquote, .notion-callout { white-space: pre-wrap; }
+.article-body .article-section-heading { margin-top: 2em; padding-top: 1em; border-top: 1px solid var(--gray-200); line-height: 1.65; }
+.article-body .article-insight-heading { padding: .8em 1em; border-left: 4px solid var(--sky); background: var(--sky-light); border-radius: 6px; }
 .article-body p { margin: 0 0 1em; }
 .article-body h2 { font-size: 1.55em; margin: 1.5em 0 .6em; color: var(--navy); }
 .article-body h3 { font-size: 1.3em; margin: 1.35em 0 .55em; color: var(--navy); }
@@ -2205,9 +2208,7 @@ let currentArticleId = null;
 
 function getTopicViewerArticles(){
   return allArticles
-    /* Notion記事URLが未設定でも、同期済みの本文ブロックがあれば
-       「過去のトピックス」に表示する。 */
-    .filter(a => getArticleBlocks(a).length > 0)
+    /* 本文形式にかかわらず、閲覧対象の記事を新しい順に表示する。 */
     .filter(a => canReadArticle(a))
     .sort((a,b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
 }
@@ -2225,68 +2226,34 @@ function getArticleBlocks(article){
   return [];
 }
 
-/* Notion本文から「今週のトピックス」の番号付き項目だけを抽出。
-   詳細本文側の見出し（参考資料URL / すがCon’s Insight 等）は索引に出さない。 */
-function extractTopicTitles(article){
+/* The renderer and index share the same plain-text heading rules. */
+function articlePlainText(article){
   const blocks=getArticleBlocks(article);
-  const topics=[];
+  if(blocks.length) return blocks.map(b=>{
+    const x=b?.[b?.type]||{};
+    const text=(x.rich_text||[]).map(r=>r?.plain_text ?? r?.text?.content ?? "").join("");
+    return b.type==="numbered_list_item" ? `1. ${text}` : text;
+  }).join("\n");
+  return [article.free_body,article.body].filter(Boolean).join("\n\n");
+}
 
-  for(const b of blocks){
-    const type=String(b?.type||"");
-    let rich=[];
+function isTopicHeading(text){
+  return !/すがCon[’'‘]?s\s*Insight|参考資料|音声|コラム|^今週の(?:医療・介護)?トピックス$/i.test(text.trim());
+}
 
-    if(type==="numbered_list_item"){
-      rich=b?.numbered_list_item?.rich_text || [];
-    }else if(["heading_1","heading_2","heading_3","paragraph"].includes(type)){
-      rich=b?.[type]?.rich_text || [];
-    }else{
-      continue;
-    }
-
-    let title=rich.map(r=>r?.plain_text ?? r?.text?.content ?? "").join("").trim();
-    if(!title) continue;
-
-    /* 「1.」「１．」「1、」など、番号が明示されている行だけ採用 */
-    const m=title.match(/^([1-9１-９])\s*[\.．、]\s*(.+)$/);
-    if(m){
-      topics.push(`${m[1]}. ${m[2].trim()}`);
-      continue;
-    }
-
-    /* 今週号のように、トピック見出しを
-       太字の「【見出し】」で作成している記事にも対応する。 */
-    const bracketHeading=title.match(/^【(.+?)】$/);
-    const hasBold=rich.some(r=>Boolean(r?.annotations?.bold));
-    if(type==="paragraph" && bracketHeading && hasBold){
-      const headingText=bracketHeading[1].trim();
-      const isDetailHeading=
-        /すがCon.?s Insight|コラム|参考資料|音声/.test(headingText);
-
-      if(headingText && !isDetailHeading){
-        topics.push(`${topics.length+1}. ${headingText}`);
-      }
-      continue;
-    }
-
-    /* Notionの numbered_list_item は本文に番号文字が含まれないため、
-       リスト項目そのものをトピックとして採用する。 */
-    if(type==="numbered_list_item"){
-      topics.push(`${topics.length+1}. ${title}`);
-    }
-  }
-
-  /* 冒頭の「今週のトピックス」一覧は通常3～4件。
-     同じタイトルが本文見出しとして再登場しても重複させない。 */
-  const unique=[];
+function extractTopicTitles(article){
+  const text=articlePlainText(article);
+  const bracket=[...text.matchAll(/【([^【】\r\n]+)】/g)]
+    .map(m=>m[1].trim()).filter(isTopicHeading);
+  const numbered=text.split(/\r?\n/).map(line=>line.trim().match(/^[0-9０-９]+\s*[.．、]\s*(.+)$/))
+    .filter(Boolean).map(m=>m[1].trim()).filter(isTopicHeading);
+  const titles=bracket.length ? bracket : numbered;
   const seen=new Set();
-  for(const t of topics){
-    const key=t.replace(/^[1-9１-９]\s*[\.．、]\s*/,"").trim();
-    if(!key || seen.has(key)) continue;
-    seen.add(key);
-    unique.push(t);
-    if(unique.length>=4) break;
-  }
-  return unique;
+  return titles.filter(t=>{
+    const key=t.replace(/^[0-9０-９]+\s*[.．、]\s*/, "").trim();
+    if(seen.has(key)) return false;
+    seen.add(key); return true;
+  });
 }
 
 function renderTopicIndex(){
@@ -2302,25 +2269,34 @@ function renderTopicIndex(){
     return;
   }
 
-  list.innerHTML=articles.map((a,index)=>{
-    const topics=extractTopicTitles(a);
-    const topicHtml=topics.length
-      ? topics.map((title,i)=>`
-          <button type="button" class="topic-title-link"
-            onclick="openTopicFromIndex('${esc(String(a.id))}',${i})">${esc(title)}</button>
-        `).join("")
-      : '<div class="topic-index-empty">トピック見出しを取得できませんでした。</div>';
-
-    return `
-      <div class="topic-week ${index===0 ? "open" : ""}" data-article-id="${esc(String(a.id))}">
-        <button type="button" class="topic-week-date" onclick="toggleTopicWeek(this)">
-          <span class="topic-week-arrow">${index===0 ? "▼" : "▶"}</span>
-          <span>${esc(a.title||"無題")}</span>
-        </button>
-        <div class="topic-week-items">${topicHtml}</div>
-      </div>
-    `;
-  }).join("");
+  list.replaceChildren();
+  articles.forEach((a,index)=>{
+    const week=document.createElement("div");
+    week.className="topic-week"+(index===0 ? " open" : "");
+    const button=document.createElement("button");
+    button.type="button";
+    button.className="topic-week-date";
+    const arrow=document.createElement("span");
+    arrow.className="topic-week-arrow";
+    arrow.textContent=index===0 ? "▼" : "▶";
+    const title=document.createElement("span");
+    title.textContent=a.title||"無題";
+    button.append(arrow,title);
+    button.addEventListener("click",()=>toggleTopicWeek(button));
+    const items=document.createElement("div");
+    items.className="topic-week-items";
+    const topics=canOpenContractArticle() ? extractTopicTitles(a) : [];
+    (topics.length ? topics : ["記事を開く"]).forEach((text,i)=>{
+      const link=document.createElement("button");
+      link.type="button";
+      link.className="topic-title-link";
+      link.textContent=text;
+      link.addEventListener("click",()=>openTopicFromIndex(a.id,topics.length ? i : -1));
+      items.appendChild(link);
+    });
+    week.append(button,items);
+    list.appendChild(week);
+  });
 }
 
 function toggleTopicWeek(btn){
@@ -2333,21 +2309,15 @@ function toggleTopicWeek(btn){
 }
 
 function openTopicFromIndex(articleId,topicIndex){
+  const article=allArticles.find(a=>String(a.id)===String(articleId));
   openArticle(articleId);
-
-  /* モーダル描画後、同じ順番の見出しまでスクロール */
-  setTimeout(()=>{
-    const body=document.getElementById("article-modal-body");
-    if(!body) return;
-    const headings=[...body.querySelectorAll("h2,h3")].filter(h=>{
-      const t=(h.textContent||"").trim();
-      return t &&
-        !/今週のトピックスを音声で聴く/.test(t) &&
-        !/^今週の(?:医療・介護)?トピックス$/i.test(t);
-    });
-    const target=headings[topicIndex];
-    if(target) target.scrollIntoView({behavior:"smooth",block:"start"});
-  },120);
+  if(!article || !canReadArticle(article) || !canOpenContractArticle() || topicIndex<0) return;
+  const title=extractTopicTitles(article)[topicIndex];
+  const normalize=t=>String(t||"").replace(/[【】]/g,"").replace(/^[0-9０-９]+\s*[.．、]\s*/,"").trim();
+  const body=document.getElementById("article-modal-body");
+  const target=[...body.querySelectorAll("h2,h3,h4,li,p")]
+    .find(h=>normalize(h.textContent)===normalize(title));
+  if(target) target.scrollIntoView({behavior:"smooth",block:"start"});
 }
 
 function updateTopicIndexVisibility(){
@@ -2431,8 +2401,8 @@ if (Array.isArray(a.notion_blocks)) {
   }
 }
 
-console.log("notion_blocks:", a.notion_blocks);
-console.log("parsed blocks:", blocks);
+
+
   if(blocks.length){
     document.getElementById("article-modal-body").innerHTML = renderNotionBlocks(blocks);
   }else{
@@ -2440,11 +2410,11 @@ console.log("parsed blocks:", blocks);
     if(freeBody && paidBody) articleBody+="\n\n";
     if(paidBody) articleBody+=paidBody;
     document.getElementById("article-modal-body").innerHTML=
-      linkifyText(stripDuplicateAudioGuideFromText(articleBody) || "本文が登録されていません。");
+      formatArticleText(stripDuplicateAudioGuideFromText(articleBody) || "本文が登録されていません。");
   }
 }else{
   document.getElementById("article-modal-body").innerHTML=
-    linkifyText(stripDuplicateAudioGuideFromText(freeBody) || "この記事の無料公開部分はありません。");
+    formatArticleText(stripDuplicateAudioGuideFromText(freeBody) || "この記事の無料公開部分はありません。");
 }
 
 const source=document.getElementById("article-modal-source");
@@ -2536,8 +2506,8 @@ function renderNotionBlocks(blocks){
 
   const richText = (arr=[]) => arr.map(r => {
     const text = esc(r?.plain_text ?? r?.text?.content ?? "");
-    const href = r?.href || r?.text?.link?.url;
-    let out = href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${text}</a>` : text;
+    const href = safeArticleUrl(r?.href || r?.text?.link?.url);
+    let out = href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${text}</a>` : linkifyText(r?.plain_text ?? r?.text?.content ?? "");
     const a=r?.annotations||{};
     if(a.bold) out=`<strong>${out}</strong>`;
     if(a.italic) out=`<em>${out}</em>`;
@@ -2551,7 +2521,15 @@ function renderNotionBlocks(blocks){
     const t=b?.type; const x=b?.[t]||{}; const txt=richText(x.rich_text);
     const plain=(x.rich_text||[]).map(r=>r?.plain_text ?? r?.text?.content ?? "").join("");
     if(isDuplicateAudioGuideText(plain)) return "";
-    if(t==="paragraph") return txt ? `<p>${txt}</p>` : `<p><br></p>`;
+    if(t==="paragraph") return formatArticleText(plain, (start,end)=>{
+      let offset=0;
+      return (x.rich_text||[]).map(r=>{
+        const text=String(r?.plain_text ?? r?.text?.content ?? "");
+        const from=Math.max(0,start-offset), to=Math.min(text.length,end-offset);
+        offset+=text.length;
+        return to>from ? richText([{...r,plain_text:text.slice(from,to)}]) : "";
+      }).join("");
+    });
     if(t==="heading_1") return `<h2>${txt}</h2>`;
     if(t==="heading_2") return `<h3>${txt}</h3>`;
     if(t==="heading_3") return `<h4>${txt}</h4>`;
@@ -2561,32 +2539,52 @@ function renderNotionBlocks(blocks){
     if(t==="callout") return `<div class="notion-callout">${txt}</div>`;
     if(t==="divider") return `<hr>`;
     if(t==="code") return `<pre><code>${txt}</code></pre>`;
-    if(t==="image"){ const u=x?.file?.url||x?.external?.url; return u?`<img class="notion-image" src="${esc(u)}" alt="">`:""; }
-    if(t==="bookmark" && x.url) return `<p><a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.url)}</a></p>`;
+    if(t==="image"){ const u=safeArticleUrl(x?.file?.url||x?.external?.url); return u?`<img class="notion-image" src="${esc(u)}" alt="">`:""; }
+    if(t==="bookmark" && safeArticleUrl(x.url)) return `<p><a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.url)}</a></p>`;
     return txt ? `<p>${txt}</p>` : "";
   };
   return blocks.map(render).join("");
 }
 
+function safeArticleUrl(value){
+  const text=String(value||"").trim();
+  if(!/^https?:\/\//i.test(text)) return "";
+  try{ const url=new URL(text); return ["http:","https:"].includes(url.protocol) ? text : ""; }
+  catch{ return ""; }
+}
+
 function linkifyText(text){
-
-  const escaped=esc(text);
-
-  return escaped.replace(
-    /(https?:\/\/[^\s<]+)/g,
-    (url)=>{
-      let cleanUrl=url;
-      let trailing="";
-
-      while(/[。、，．,.!！?？)）\]】」』〉》]$/.test(cleanUrl)){
-        trailing=cleanUrl.slice(-1)+trailing;
-        cleanUrl=cleanUrl.slice(0,-1);
-      }
-
-      return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" style="color:var(--sky);text-decoration:underline;overflow-wrap:anywhere;">${cleanUrl}</a>${trailing}`;
+  const raw=String(text||"");
+  const pattern=/https?:\/\/[^\s<>"']+/gi;
+  let html="",offset=0;
+  for(const match of raw.matchAll(pattern)){
+    let url=match[0],trailing="";
+    while(/[。、，．,.!！?？)）\]】」』〉》]$/.test(url)){
+      trailing=url.slice(-1)+trailing; url=url.slice(0,-1);
     }
-  );
+    html+=esc(raw.slice(offset,match.index));
+    html+=safeArticleUrl(url) ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>` : esc(url);
+    html+=esc(trailing); offset=match.index+match[0].length;
+  }
+  return html+esc(raw.slice(offset));
+}
 
+/* Split only the display; source strings and Notion rich-text offsets stay intact. */
+function formatArticleText(value,renderRange){
+  const text=String(value||"");
+  const inline=renderRange || ((start,end)=>linkifyText(text.slice(start,end)));
+  const pattern=/【([^【】\r\n]+)】|\r?\n[ \t]*\r?\n/g;
+  let html="",offset=0;
+  const paragraph=(start,end)=>text.slice(start,end).trim() ? `<p>${inline(start,end)}</p>` : "";
+  for(const match of text.matchAll(pattern)){
+    html+=paragraph(offset,match.index);
+    if(match[1]){
+      const insight=/すがCon[’'‘]?s\s*Insight/i.test(match[1]);
+      html+=`<h3 class="article-section-heading${insight ? " article-insight-heading" : ""}">${inline(match.index,match.index+match[0].length)}</h3>`;
+    }
+    offset=match.index+match[0].length;
+  }
+  return html+paragraph(offset,text.length);
 }
 
 
@@ -2687,3 +2685,4 @@ doLogin();
 
 </body>
 </html>
+
