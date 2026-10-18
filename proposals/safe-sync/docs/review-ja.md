@@ -18,6 +18,8 @@ HTTP/本文/メディア/upsertのエラーなら削除まで到達しません�
 - 既存関数：Verify JWT with legacy secret OFF。提供コード内にも呼び出し元の認証処理なし
 - CronのSucceededはpg_netへの投入成功であり、同期処理完了を証明しない
 
+提供された25行のCSVで、記事のRLSがauthenticated向けUSING(true)、article-mediaがpublicであることを確認した。[追加の権限確認結果](security-findings-ja.md)を参照。同期の本番移行前にサーバー側の有料アクセス保護も設計する。
+
 ## 今回実装した候補
 
 新規関数名：`sync-notion-articles-safe`。Notionトークン、Supabase service roleはサーバーだけで使用。
@@ -81,8 +83,8 @@ Webhookは後続段階。Notionの署名検証、イベントIDの永続化、�
 
 ## 実施した検証と限界
 
-Nodeの15テストとPGlite（ローカルWASM PostgreSQL）の5テスト、計20テストが成功。認証・dry-run・差分・メディア・失敗時保持・RPCの権限制限・重複ロック・記事と状態の原子的保存を検証した。
-検証用DDLを使ったSQL検証であり、本番のDDL・RLS・トリガー互換性、Supabase Edge Runtime上でのデプロイ、Notion/Supabase実API、Cron/pg_net/Vaultの動作は未検証。CronテンプレートのSQLは本番で実行していない。
+Nodeの16テストとPGlite（ローカルWASM PostgreSQL）の7テスト、計23テストが成功。認証・dry-run・差分・メディア・失敗時保持・RPCの権限制限・重複ロック・記事と状態の原子的保存を検証した。
+CSVの列型・既定値・UNIQUE制約に合わせた検証用DDLでテストした。idのIDENTITY採番方式は仮置きで追加確認中。本番の全DDL・RLS・トリガー互換性、Supabase Edge Runtime上でのデプロイ、Notion/Supabase実API、Cron/pg_net/Vaultの動作は未検証。CronテンプレートのSQLは本番で実行していない。
 
 ## 成功判定と監視
 

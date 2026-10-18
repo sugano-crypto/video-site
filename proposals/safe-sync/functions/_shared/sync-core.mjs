@@ -80,10 +80,19 @@ export async function syncArticles(io, {apply=false, force=false}={}){
   const pages=await io.pages();
   if(!pages.length) throw Error('empty_source_no_writes');
   const entries=pages.map(page=>({page,meta:metadata(page)}));
-  const ids=new Set();
-  for(const {meta} of entries){if(ids.has(meta.id))throw Error(`duplicate_article_id:${meta.id}`);ids.add(meta.id);}
+  const ids=new Set(),contentIds=new Set();
+  for(const {meta} of entries){
+    if(ids.has(meta.id))throw Error(`duplicate_article_id:${meta.id}`);
+    ids.add(meta.id);
+    if(PUBLISHED.has(meta.status)){
+      const contentId=compactId(meta.contentId);
+      if(contentIds.has(contentId))throw Error(`duplicate_content_page:${meta.id}`);
+      contentIds.add(contentId);
+    }
+  }
   const existing=await io.existing();
   const byId=new Map(existing.filter(a=>a.article_id).map(a=>[a.article_id,a]));
+  const byContent=new Map(existing.filter(a=>a.notion_page_id).map(a=>[compactId(a.notion_page_id),a]));
   const report={dry_run:!apply,scanned:pages.length,unchanged:0,updated:[],would_update:[],attention:[],errors:[],deleted:0};
   // Never infer deletion/withdrawal from absence. Flag it for review.
   for(const row of existing){
@@ -96,6 +105,8 @@ export async function syncArticles(io, {apply=false, force=false}={}){
       continue;
     }
     try{
+      const conflicting=byContent.get(compactId(meta.contentId));
+      if(conflicting && conflicting.article_id!==meta.id)throw Error('content_page_collision');
       const state=await io.state(meta.id);
       if(state && (compactId(state.master_page_id)!==compactId(page.id)||compactId(state.source_database_id)!==compactId(io.databaseId))) throw Error('ownership_conflict');
       if(old && !state && compactId(old.notion_page_id)!==compactId(meta.contentId)) throw Error('unowned_article_collision');

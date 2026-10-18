@@ -127,3 +127,11 @@ test('Notion 429 honors bounded retry and never retries a 403 as publication rem
  await io.schema();assert.equal(calls,2);
  const denied=runtime({fetchImpl:async()=>new Response('',{status:403})});await assert.rejects(()=>denied.schema(),/notion_http_403/);
 });
+
+test('duplicate source content page fails preflight and existing unique page collision is preserved',async()=>{
+ const f=fixture();const other=structuredClone(f.m);other.id='cccccccc-cccc-cccc-cccc-cccccccccccc';other.properties['記事ID'].rich_text=[{plain_text:'OTHER'}];
+ f.io.pages=async()=>[f.m,other];
+ await assert.rejects(()=>syncArticles(f.io,{apply:true}),/duplicate_content_page/);assert.deepEqual(f.writes,[]);assert.deepEqual(f.uploads,[]);
+ const g=fixture();g.io.existing=async()=>[{article_id:'OTHER',notion_page_id:CONTENT}];
+ const result=await syncArticles(g.io,{apply:true});assert.equal(result.errors[0].reason,'content_page_collision');assert.deepEqual(g.writes,[]);assert.deepEqual(g.uploads,[]);
+});
