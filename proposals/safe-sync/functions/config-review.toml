@@ -1,0 +1,4 @@
+# Review snippet only. This is not an active supabase/config.toml.
+# This dedicated endpoint authenticates x-sync-secret in the function, before all I/O.
+[functions.sync-notion-articles-safe]
+verify_jwt = false
