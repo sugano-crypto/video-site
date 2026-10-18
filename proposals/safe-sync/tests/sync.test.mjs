@@ -19,7 +19,7 @@ function fixture(){
  page:async id=>id===MASTER?m:c,blocks:async()=>[{type:'paragraph',paragraph:{rich_text:rt('既存ブロック')}}],
  richText:async(p,k)=>p.properties[k].rich_text.map(r=>r.plain_text).join(''),
  media:async(url,id,kind,apply)=>{if(apply)uploads.push(kind);return `https://new/${kind}`;},
- commit:async(a,s)=>{writes.push(a);state=s;},errorCode:e=>e.message,acquire:async()=> 'token',release:async()=>{},
+ commit:async(a,s)=>{writes.push(a);state=s;},errorCode:e=>e.message,accessReady:async()=>true,acquire:async()=> 'token',release:async()=>{},
  };
  return {io,m,c,old,writes,uploads,setState:s=>state=s};
 }
@@ -52,7 +52,7 @@ test('empty database, wrong schema, duplicate ID and missing access fail before 
 test('status type is supported; explicit non-public and missing source rows are never deleted',async()=>{
  const f=fixture();f.m.properties['ステータス']=prop('status',{name:'公開'});assert.equal(metadata(f.m).status,'公開');
  f.m.properties['ステータス'].status.name='下書き';
- const report=await syncArticles(f.io,{apply:true});assert.equal(report.deleted,0);assert.equal(report.attention[0].reason,'explicit_non_public');assert.deepEqual(f.writes,[]);
+ const report=await syncArticles(f.io,{apply:true});assert.equal(report.deleted,0);assert.equal(report.attention[0].reason,'non_public_requires_ownership_review');assert.deepEqual(f.writes,[]);
  const g=fixture();g.io.existing=async()=>[{article_id:'OTHER',notion_page_id:CONTENT}];
  assert.equal((await syncArticles(g.io)).attention[0].reason,'absent_from_source');
 });
@@ -134,4 +134,27 @@ test('duplicate source content page fails preflight and existing unique page col
  await assert.rejects(()=>syncArticles(f.io,{apply:true}),/duplicate_content_page/);assert.deepEqual(f.writes,[]);assert.deepEqual(f.uploads,[]);
  const g=fixture();g.io.existing=async()=>[{article_id:'OTHER',notion_page_id:CONTENT}];
  const result=await syncArticles(g.io,{apply:true});assert.equal(result.errors[0].reason,'content_page_collision');assert.deepEqual(g.writes,[]);assert.deepEqual(g.uploads,[]);
+});
+
+test('apply refuses writes while server-side access controls are not ready',async()=>{
+ const f=fixture();f.io.accessReady=async()=>false;let acquired=0;f.io.acquire=async()=>{acquired++;return 'token';};
+ const handler=makeHandler({secret:'s'.repeat(40),applyEnabled:true,ioFactory:()=>f.io});
+ const response=await handler(new Request('https://local/',{method:'POST',headers:{'x-sync-secret':'s'.repeat(40)},body:'{"dry_run":false}'}));
+ assert.equal(response.status,403);assert.equal(acquired,0);assert.deepEqual(f.writes,[]);
+});
+test('explicit withdrawal only changes owned articles; republish recovers through a full sync',async()=>{
+ const f=fixture();const revision=await fingerprint(f.m,f.c);
+ f.setState({article_id:'TOPIC-20261018',master_page_id:MASTER,source_database_id:f.io.databaseId,fingerprint:revision,withdrawn:false});
+ f.m.parent={database_id:f.io.databaseId};f.m.properties['ステータス'].select.name='下書き';let withdrawals=0;
+ f.io.withdraw=async()=>{withdrawals++;f.old.status='unpublished';f.setState({master_page_id:MASTER,source_database_id:f.io.databaseId,fingerprint:revision,withdrawn:true});};
+ const report=await syncArticles(f.io,{apply:true});assert.deepEqual(report.withdrawn,['TOPIC-20261018']);assert.equal(report.deleted,0);assert.equal(withdrawals,1);assert.deepEqual(f.writes,[]);
+ f.m.properties['ステータス'].select.name='公開';
+ assert.deepEqual((await syncArticles(f.io,{apply:true})).updated,['TOPIC-20261018']);assert.equal(f.writes[0].body,'【記事見出し】\n有料本文');
+});
+test('withdrawal confirmation failure and dry run do not change published row',async()=>{
+ const f=fixture();f.m.properties['ステータス'].select.name='下書き';
+ f.setState({master_page_id:MASTER,source_database_id:f.io.databaseId,withdrawn:false});f.m.parent={database_id:f.io.databaseId};
+ let writes=0;f.io.withdraw=async()=>{writes++;};
+ assert.deepEqual((await syncArticles(f.io)).would_withdraw,['TOPIC-20261018']);assert.equal(writes,0);
+ f.io.page=async()=>{throw Error('notion_http_403');};assert.equal((await syncArticles(f.io,{apply:true})).errors[0].reason,'notion_http_403');assert.equal(writes,0);
 });

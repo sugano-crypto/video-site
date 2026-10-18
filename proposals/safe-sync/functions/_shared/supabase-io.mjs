@@ -77,6 +77,8 @@ export function createIO({env,createClient,fetchImpl=fetch,pauseImpl=ms=>new Pro
       }
     },
     state:id=>rpc('sc_sync_state',{p_article_id:id}),
+    accessReady:()=>rpc('sc_sync_access_ready'),
+    withdraw:(id,master)=>rpc('sc_sync_withdraw',{p_token:lockToken,p_article_id:id,p_master_page_id:master}),
     async acquire(){
       lockToken=crypto.randomUUID();
       const acquired=await rpc('sc_sync_acquire',{p_token:lockToken});return acquired?lockToken:null;

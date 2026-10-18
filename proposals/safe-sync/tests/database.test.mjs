@@ -39,7 +39,7 @@ test('SQL atomic lease rejects competing owner and commit without lease',async()
  await assert.rejects(()=>commit(article,state,OTHER),/sync_lease_expired/);
 });
 test('SQL commits article and state together; retry keeps original article ID',async()=>{
- await commit();const first=(await q('select id,status,body from articles')).rows[0];assert.equal(first.body,'有料本文');assert.equal(first.status,null);assert.equal(typeof first.id,'number');
+ await commit();const first=(await q('select id,status,body from articles')).rows[0];assert.equal(first.body,'有料本文');assert.equal(first.status,'published');assert.equal(typeof first.id,'number');
  assert.equal((await q('select sc_sync_state($1) as s',[article.article_id])).rows[0].s.fingerprint,state.fingerprint);
  await commit({...article,body:'更新した本文'},{...state,fingerprint:'b'.repeat(64)});
  const second=(await q('select id,body from articles')).rows[0];assert.equal(second.id,first.id);assert.equal(second.body,'更新した本文');
@@ -71,4 +71,16 @@ test('CSV policy permits a logged-in reader to read full paid body; migration do
   await q('set role authenticated');
   assert.equal((await q('select body from public.articles')).rows[0].body,'更新した本文');
  }finally{await q('reset role');}
+});
+
+test('owned withdrawal retains all content and republish clears withdrawal state',async()=>{
+ const before=(await q('select id,body,notion_audio_url from articles')).rows[0];
+ await q('select sc_sync_withdraw($1::uuid,$2,$3::uuid)',[OTHER,article.article_id,state.master_page_id]);
+ const hidden=(await q('select id,body,notion_audio_url,status from articles')).rows[0];
+ assert.equal(hidden.id,before.id);assert.equal(hidden.body,before.body);assert.equal(hidden.notion_audio_url,before.notion_audio_url);assert.equal(hidden.status,'unpublished');
+ assert.equal((await q('select sc_sync_state($1) as s',[article.article_id])).rows[0].s.withdrawn,true);
+ await assert.rejects(()=>q('select sc_sync_withdraw($1::uuid,$2,$3::uuid)',[OTHER,article.article_id,TOKEN]),/sync_owner_mismatch/);
+ await commit({...article,body:before.body},state,OTHER);
+ assert.equal((await q('select status from articles')).rows[0].status,'published');
+ assert.equal((await q('select sc_sync_state($1) as s',[article.article_id])).rows[0].s.withdrawn,false);
 });

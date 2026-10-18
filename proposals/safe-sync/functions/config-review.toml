@@ -2,3 +2,11 @@
 # This dedicated endpoint authenticates x-sync-secret in the function, before all I/O.
 [functions.sync-notion-articles-safe]
 verify_jwt = false
+
+# Calls auth.getUser and checks protected articles RLS before signing any path.
+[functions.article-media-links]
+verify_jwt = false
+
+# Existing endpoint replacement candidate; custom authentication remains mandatory.
+[functions.sync-notion-articles]
+verify_jwt = false

@@ -93,7 +93,7 @@ export async function syncArticles(io, {apply=false, force=false}={}){
   const existing=await io.existing();
   const byId=new Map(existing.filter(a=>a.article_id).map(a=>[a.article_id,a]));
   const byContent=new Map(existing.filter(a=>a.notion_page_id).map(a=>[compactId(a.notion_page_id),a]));
-  const report={dry_run:!apply,scanned:pages.length,unchanged:0,updated:[],would_update:[],attention:[],errors:[],deleted:0};
+  const report={dry_run:!apply,scanned:pages.length,unchanged:0,updated:[],would_update:[],withdrawn:[],would_withdraw:[],attention:[],errors:[],deleted:0};
   // Never infer deletion/withdrawal from absence. Flag it for review.
   for(const row of existing){
     if(row.article_id&&!ids.has(row.article_id)) report.attention.push({article_id:row.article_id,reason:'absent_from_source'});
@@ -101,7 +101,20 @@ export async function syncArticles(io, {apply=false, force=false}={}){
   for(const {page,meta} of entries){
     const old=byId.get(meta.id);
     if(!PUBLISHED.has(meta.status)||page.archived||page.in_trash){
-      if(old)report.attention.push({article_id:meta.id,reason:'explicit_non_public'});
+      if(old){
+        try{
+          const state=await io.state(meta.id);
+          if(!state||compactId(state.master_page_id)!==compactId(page.id)||compactId(state.source_database_id)!==compactId(io.databaseId)){
+            report.attention.push({article_id:meta.id,reason:'non_public_requires_ownership_review'});
+          }else if(!state.withdrawn){
+            const latest=await io.page(page.id);
+            if(compactId(latest.parent?.database_id)!==compactId(io.databaseId)||plain(latest.properties?.['記事ID']?.rich_text).trim()!==meta.id)throw Error('withdrawal_source_mismatch');
+            if(PUBLISHED.has(statusOf(latest.properties?.['ステータス']))&&!latest.archived&&!latest.in_trash)throw Error('source_changed_retry');
+            if(apply){await io.withdraw(meta.id,page.id);report.withdrawn.push(meta.id);}
+            else report.would_withdraw.push(meta.id);
+          }
+        }catch(error){report.errors.push({article_id:meta.id,reason:io.errorCode(error)});}
+      }
       continue;
     }
     try{
@@ -110,11 +123,11 @@ export async function syncArticles(io, {apply=false, force=false}={}){
       const state=await io.state(meta.id);
       if(state && (compactId(state.master_page_id)!==compactId(page.id)||compactId(state.source_database_id)!==compactId(io.databaseId))) throw Error('ownership_conflict');
       if(old && !state && compactId(old.notion_page_id)!==compactId(meta.contentId)) throw Error('unowned_article_collision');
-      if(old?.status&&!['published','公開','公開中'].includes(String(old.status).toLowerCase())) throw Error('existing_status_requires_review');
+      if(old?.status&&!['published','公開','公開中'].includes(String(old.status).toLowerCase())&&!(state?.withdrawn&&old.status==='unpublished')) throw Error('existing_status_requires_review');
       const content=await io.page(meta.contentId);
       if(content.archived||content.in_trash) throw Error('content_page_not_active');
       const revision=await fingerprint(page,content);
-      if(!force && old && state?.fingerprint===revision){report.unchanged++;continue;}
+      if(!force && old && !state?.withdrawn && state?.fingerprint===revision){report.unchanged++;continue;}
       const blocks=await io.blocks(meta.contentId);
       const [free,paid]=await Promise.all([io.richText(page,'無料公開部分'),io.richText(page,'有料公開部分')]);
       if(!free.trim()&&!paid.trim()&&!blocks.length)throw Error('empty_article');
@@ -159,7 +172,7 @@ export function makeHandler({secret,applyEnabled=false,ioFactory}){
     const io=ioFactory();let token;
     try{
       // Dry-runs do not create locks, state, articles or storage objects.
-      if(apply){token=await io.acquire();if(!token)return json({error:'sync_busy'},409);}
+      if(apply){if(!await io.accessReady())return json({error:'access_controls_not_ready'},403);token=await io.acquire();if(!token)return json({error:'sync_busy'},409);}
       const report=await syncArticles(io,{apply,force:options.force===true});
       return json(report,report.errors.length?502:report.attention.length?409:200);
     }catch(error){return json({error:io.errorCode(error),deleted:0},502);}
