@@ -1,0 +1,11 @@
+{
+  "name": "sugacon-safe-sync-proposal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/sync.test.mjs tests/database.test.mjs tests/member-access.test.mjs"
+  },
+  "engines": { "node": ">=22" },
+  "devDependencies": { "@electric-sql/pglite": "0.5.10" }
+}

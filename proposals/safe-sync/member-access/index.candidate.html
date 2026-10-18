@@ -1,0 +1,2734 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>すがコンサルティング＆パートナーズ｜会員サイト</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --navy: #1a3a5c;
+  --navy-dark: #102640;
+  --navy-mid: #2a5298;
+  --sky: #4a90d9;
+  --sky-light: #e8f4fd;
+  --white: #ffffff;
+  --gray-100: #f5f8fc;
+  --gray-200: #e8eef5;
+  --gray-400: #8fa3b8;
+  --gray-600: #4a6280;
+  --text: #1e3450;
+}
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--gray-100);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.auth-screen {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding: 40px 24px;
+  background: linear-gradient(145deg,#eaf3fb 0%,#f5f8fc 50%,#e8f0f8 100%);
+  overflow-y: auto;
+}
+
+.auth-screen.active {
+  display: flex;
+}
+
+.auth-card {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 48px 44px 44px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 4px 24px rgba(26,58,92,.10);
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.brand img {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  margin-bottom: 10px;
+}
+
+.brand-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: .03em;
+  line-height: 1.5;
+}
+
+.brand-sub {
+  font-size: 12px;
+  color: var(--gray-400);
+  margin-top: 4px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-600);
+  margin-bottom: 6px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--gray-100);
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: var(--sky);
+  box-shadow: 0 0 0 3px rgba(74,144,217,.12);
+  background: var(--white);
+}
+
+.auth-btn {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg,var(--navy-mid),var(--navy));
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.auth-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.msg {
+  font-size: 12px;
+  text-align: center;
+  margin-top: 12px;
+  min-height: 16px;
+}
+
+.msg.error { color:#c0392b; }
+.msg.success { color:#27ae60; }
+
+#main-screen {
+  display: none;
+}
+
+.header {
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-200);
+  padding: 0 28px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 6px rgba(26,58,92,.07);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+.header-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.3;
+}
+
+.header-title span {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--gray-400);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-email {
+  font-size: 12px;
+  color: var(--gray-400);
+}
+
+.header-btn {
+  background: transparent;
+  border: 1.5px solid var(--gray-200);
+  color: var(--gray-600);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.header-btn.admin {
+  background: var(--navy);
+  color: white;
+  border-color: var(--navy);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.section-header::before {
+  content:'';
+  display:block;
+  width:4px;
+  height:20px;
+  background:linear-gradient(to bottom,var(--sky),var(--navy));
+  border-radius:2px;
+}
+
+.section-title {
+  font-size:14px;
+  font-weight:500;
+  color:var(--gray-600);
+}
+
+.video-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:20px;
+}
+
+.video-card-wrap {
+  position:relative;
+}
+
+.video-card {
+  background:var(--white);
+  border-radius:12px;
+  overflow:hidden;
+  cursor:pointer;
+  text-decoration:none;
+  color:inherit;
+  display:block;
+  border:1px solid var(--gray-200);
+}
+
+.video-card.locked {
+  cursor:default;
+}
+
+.thumbnail-wrap {
+  position:relative;
+  width:100%;
+  padding-top:56.25%;
+  background:var(--gray-200);
+  overflow:hidden;
+}
+
+.thumbnail-wrap img {
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.video-card.locked .thumbnail-wrap img {
+  filter:brightness(.5);
+}
+
+.play-icon {
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  width:48px;
+  height:48px;
+  background:rgba(26,58,92,.82);
+  border-radius:50%;
+}
+
+.play-icon::after {
+  content:'';
+  position:absolute;
+  top:50%;
+  left:52%;
+  transform:translate(-50%,-50%);
+  border-style:solid;
+  border-width:8px 0 8px 16px;
+  border-color:transparent transparent transparent white;
+}
+
+.lock-icon {
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:32px;
+}
+
+.lock-badge {
+  position:absolute;
+  bottom:8px;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,.75);
+  color:white;
+  font-size:11px;
+  padding:3px 10px;
+  border-radius:20px;
+  white-space:nowrap;
+}
+
+.video-info {
+  padding:14px 16px 16px;
+}
+
+.video-title {
+  font-size:14px;
+  font-weight:700;
+  line-height:1.5;
+}
+
+.video-desc {
+  font-size:12px;
+  color:var(--gray-400);
+  line-height:1.6;
+  margin-top:6px;
+}
+
+.video-date {
+  font-size:11px;
+  color:var(--gray-400);
+  margin-top:10px;
+}
+
+.card-delete-btn {
+  display:none;
+  position:absolute;
+  top:8px;
+  right:8px;
+  background:#c0392b;
+  color:white;
+  border:none;
+  border-radius:6px;
+  padding:5px 10px;
+  z-index:10;
+}
+
+body.is-admin .card-delete-btn {
+  display:block;
+}
+
+.loading {
+  text-align:center;
+  padding:80px 20px;
+  color:var(--gray-400);
+}
+
+.text-link {
+  display:block;
+  text-align:center;
+  color:var(--sky);
+  font-size:13px;
+  margin-top:18px;
+  cursor:pointer;
+}
+
+.contact-note {
+  font-size:12px;
+  color:var(--gray-400);
+  text-align:center;
+  margin-top:12px;
+  line-height:1.7;
+}
+
+.contact-note a {
+  color:var(--sky);
+}
+
+.contract-badge {
+  display:none;
+  align-items:center;
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+}
+
+.contract-badge.active {
+  display:inline-flex;
+  background:#e9f7ef;
+  color:#237a45;
+  border:1px solid #c9ead6;
+}
+
+.contract-badge.paused {
+  display:inline-flex;
+  background:#fff6df;
+  color:#8a6418;
+  border:1px solid #f1dfae;
+}
+
+.contract-badge.ended {
+  display:inline-flex;
+  background:#f5eaea;
+  color:#a33a32;
+  border:1px solid #ecc9c6;
+}
+
+.content-switch {
+  display:flex;
+  gap:10px;
+  margin-bottom:24px;
+  border-bottom:1px solid var(--gray-200);
+  padding-bottom:12px;
+}
+
+.content-switch-btn {
+  flex:1;
+  max-width:240px;
+  border:1.5px solid var(--gray-200);
+  background:white;
+  color:var(--gray-600);
+  padding:12px 18px;
+  border-radius:10px;
+  font-family:inherit;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.content-switch-btn.active {
+  background:var(--navy);
+  border-color:var(--navy);
+  color:#fff;
+}
+
+.content-panel {
+  display:none;
+}
+
+.content-panel.active {
+  display:block;
+}
+
+.article-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:16px;
+}
+
+.article-card {
+  background:#fff;
+  border:1px solid var(--gray-200);
+  border-radius:12px;
+  padding:18px;
+  cursor:pointer;
+}
+
+.article-card h3 {
+  font-size:15px;
+  font-weight:700;
+  line-height:1.65;
+}
+
+.article-date {
+  margin-top:12px;
+  font-size:11px;
+  color:var(--gray-400);
+}
+
+.article-menu {
+  display:none;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+  margin:18px 0;
+}
+
+.article-menu.show {
+  display:grid;
+}
+
+.article-menu-card {
+  background:#fff;
+  border:1px solid #dfe6ef;
+  border-radius:12px;
+  padding:22px;
+  text-align:left;
+  cursor:pointer;
+}
+
+.article-menu-card h3 {
+  margin:0 0 8px;
+  font-size:17px;
+  color:#173154;
+}
+
+.article-menu-card p {
+  margin:0;
+  color:#66758a;
+  font-size:13px;
+  line-height:1.7;
+}
+
+.article-back {
+  display:none;
+  margin:8px 0 14px;
+  background:none;
+  border:0;
+  color:#315b94;
+  cursor:pointer;
+  font-weight:700;
+}
+
+.article-back.show {
+  display:block;
+}
+
+#article-modal {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(26,58,92,.45);
+  z-index:250;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+
+.article-modal-card {
+  width:min(860px,100%);
+  max-height:88vh;
+  overflow:auto;
+  background:#fff;
+  border-radius:16px;
+  padding:30px;
+}
+
+/* Notion cover image */
+.article-cover-wrap {
+  display:none;
+  margin:-30px -30px 24px;
+  overflow:hidden;
+  border-radius:16px 16px 0 0;
+  background:var(--gray-100);
+}
+
+.article-cover-wrap.show {
+  display:block;
+}
+
+.article-cover-image {
+  display:block;
+  width:100%;
+  max-height:360px;
+  object-fit:cover;
+}
+
+.article-modal-top {
+  display:flex;
+  justify-content:space-between;
+  gap:20px;
+}
+
+.article-modal-title {
+  font-size:22px;
+  font-weight:700;
+  color:var(--navy);
+  line-height:1.55;
+}
+
+.article-close {
+  border:none;
+  background:var(--gray-100);
+  border-radius:8px;
+  padding:7px 11px;
+  cursor:pointer;
+}
+
+.article-body {
+  font-size:14px;
+  line-height:2;
+  white-space:pre-wrap;
+  margin-top:12px;
+}
+
+.article-source {
+  margin-top:24px;
+  padding-top:16px;
+  border-top:1px solid var(--gray-200);
+  font-size:12px;
+}
+
+@media(max-width:700px) {
+  .article-menu {
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:600px) {
+  #article-modal {
+    padding:0;
+    align-items:stretch;
+  }
+
+  .article-modal-card {
+    width:100%;
+    max-height:100dvh;
+    min-height:100dvh;
+    border-radius:0;
+    padding:20px 18px 28px;
+  }
+
+  .article-cover-wrap {
+    margin:-20px -18px 20px;
+    border-radius:0;
+  }
+
+  .article-cover-image {
+    max-height:260px;
+  }
+
+  .article-modal-title {
+    font-size:19px;
+  }
+
+  .article-body {
+    font-size:14px;
+    line-height:1.9;
+  }
+
+  .video-grid {
+    grid-template-columns:1fr;
+  }
+
+  .auth-card {
+    padding:36px 24px 32px;
+  }
+
+  .user-email {
+    display:none;
+  }
+
+  .header {
+    padding:0 16px;
+  }
+}
+
+/* 2026-09-22: Notion記事・バックナンバー表示 */
+.article-card.notion-article {
+  border-left:4px solid var(--sky);
+}
+.article-card.locked-article {
+  cursor:default;
+  background:#f7f9fc;
+}
+.article-card.locked-article h3 {
+  color:var(--gray-600);
+}
+.article-access-note {
+  margin-top:10px;
+  font-size:11px;
+  color:var(--gray-400);
+}
+.article-open-badge {
+  display:inline-block;
+  margin-top:10px;
+  padding:4px 9px;
+  border-radius:999px;
+  background:var(--sky-light);
+  color:var(--navy-mid);
+  font-size:11px;
+  font-weight:700;
+}
+
+/* Notion viewer */
+.article-body { white-space: normal; overflow-wrap: anywhere; }
+.article-body p, .article-body li, .article-body blockquote, .notion-callout { white-space: pre-wrap; }
+.article-body .article-section-heading { margin-top: 2em; padding-top: 1em; border-top: 1px solid var(--gray-200); line-height: 1.65; }
+.article-body .article-insight-heading { padding: .8em 1em; border-left: 4px solid var(--sky); background: var(--sky-light); border-radius: 6px; }
+.article-body p { margin: 0 0 1em; }
+.article-body h2 { font-size: 1.55em; margin: 1.5em 0 .6em; color: var(--navy); }
+.article-body h3 { font-size: 1.3em; margin: 1.35em 0 .55em; color: var(--navy); }
+.article-body h4 { font-size: 1.12em; margin: 1.2em 0 .5em; }
+.article-body ul,.article-body ol { margin: .6em 0 1em 1.6em; }
+.article-body blockquote { margin: 1em 0; padding: .5em 1em; border-left: 4px solid var(--sky); background: var(--gray-100); }
+.article-body pre { overflow:auto; padding:14px; background:#f5f8fc; border-radius:8px; }
+.article-body code { font-family: monospace; }
+.notion-callout { margin:1em 0; padding:14px 16px; background:var(--sky-light); border-radius:10px; }
+.notion-image { max-width:100%; height:auto; border-radius:8px; margin:1em 0; }
+.article-body a { color:var(--sky); text-decoration:underline; overflow-wrap:anywhere; }
+
+
+/* Notion audio player */
+.article-audio-wrap {
+  display:none;
+  margin:14px 0 22px;
+  padding:14px 16px;
+  background:var(--gray-100);
+  border:1px solid var(--gray-200);
+  border-radius:12px;
+}
+.article-audio-wrap.show { display:block; }
+.article-audio-label {
+  font-size:12px;
+  font-weight:700;
+  color:var(--gray-600);
+  margin-bottom:8px;
+}
+.article-audio-player {
+  display:block;
+  width:100%;
+  height:42px;
+}
+
+
+
+/* 2026-09-23: 過去のトピックス・週別索引 */
+.article-content-layout {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 310px;
+  gap:24px;
+  align-items:start;
+}
+.article-main-column { min-width:0; }
+
+.topic-index {
+  display:none;
+  position:sticky;
+  top:84px;
+  background:#fff;
+  border:1px solid var(--gray-200);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 2px 10px rgba(26,58,92,.05);
+}
+.topic-index.show { display:block; }
+.topic-index-title {
+  padding:15px 16px;
+  font-size:14px;
+  font-weight:700;
+  color:var(--navy);
+  border-bottom:1px solid var(--gray-200);
+  background:var(--gray-100);
+}
+.topic-index-list {
+  max-height:calc(100vh - 150px);
+  overflow:auto;
+  padding:4px 0;
+}
+.topic-week { border-bottom:1px solid var(--gray-200); }
+.topic-week:last-child { border-bottom:none; }
+.topic-week-date {
+  width:100%;
+  border:0;
+  background:#fff;
+  color:var(--navy);
+  text-align:left;
+  padding:12px 15px;
+  font:inherit;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.topic-week-date:hover { background:var(--gray-100); }
+.topic-week-arrow {
+  width:14px;
+  flex:0 0 14px;
+  color:var(--gray-600);
+}
+.topic-week-items {
+  display:none;
+  padding:0 12px 10px 36px;
+}
+.topic-week.open .topic-week-items { display:block; }
+.topic-title-link {
+  display:block;
+  width:100%;
+  border:0;
+  background:transparent;
+  text-align:left;
+  color:var(--text);
+  padding:7px 0;
+  font:inherit;
+  font-size:12px;
+  font-weight:400;
+  line-height:1.65;
+  cursor:pointer;
+}
+.topic-title-link:hover {
+  color:var(--navy-mid);
+  text-decoration:underline;
+}
+.topic-index-empty {
+  padding:16px;
+  color:var(--gray-400);
+  font-size:12px;
+  line-height:1.7;
+}
+@media(max-width:900px) {
+  .article-content-layout { grid-template-columns:1fr; }
+  .topic-index {
+    position:static;
+    order:-1;
+    margin-bottom:18px;
+  }
+  .topic-index-list { max-height:none; }
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- ログイン -->
+<div id="login-screen" class="auth-screen active">
+<div class="auth-card">
+<div class="brand">
+<img src="logo.png" alt="ロゴ">
+<div class="brand-name">すがコンサルティング＆パートナーズ</div>
+<div class="brand-sub">会員サイト</div>
+</div>
+
+<div class="form-group">
+<label>メールアドレス</label>
+<input type="email" id="login-email">
+</div>
+
+<div class="form-group">
+<label>パスワード</label>
+<input type="password" id="login-pw">
+</div>
+
+<button class="auth-btn" id="login-btn" onclick="doLogin()">ログイン</button>
+<div class="msg error" id="login-msg"></div>
+
+<span class="text-link" onclick="showScreen('reset-screen')">
+パスワードを忘れた方はこちら
+</span>
+
+<p class="contact-note">
+登録メールアドレスがご不明な方は<br>
+<a href="mailto:info@sugacon.net">info@sugacon.net</a>までご連絡ください
+</p>
+</div>
+</div>
+
+<!-- リセット -->
+<div id="reset-screen" class="auth-screen">
+<div class="auth-card">
+
+<div class="brand">
+<div class="brand-name">パスワードのリセット</div>
+</div>
+
+<div class="form-group">
+<label>メールアドレス</label>
+<input type="email" id="reset-email">
+</div>
+
+<button class="auth-btn" id="reset-btn" onclick="doResetPassword()">
+リセットメールを送信
+</button>
+
+<div class="msg" id="reset-msg"></div>
+
+<span class="text-link" onclick="showScreen('login-screen')">
+ログインに戻る
+</span>
+
+</div>
+</div>
+
+<!-- 初回パスワード -->
+<div id="firstpw-screen" class="auth-screen">
+<div class="auth-card">
+
+<div class="brand">
+<div class="brand-name">パスワードの変更</div>
+<div class="brand-sub">
+初回ログインのため、新しいパスワードを設定してください
+</div>
+</div>
+
+<div class="form-group">
+<label>新しいパスワード（8文字以上）</label>
+<input type="password" id="firstpw-new">
+</div>
+
+<div class="form-group">
+<label>確認</label>
+<input type="password" id="firstpw-confirm">
+</div>
+
+<button class="auth-btn" id="firstpw-btn"
+onclick="doFirstPasswordChange()">
+パスワードを設定する
+</button>
+
+<div class="msg" id="firstpw-msg"></div>
+
+</div>
+</div>
+
+<!-- メイン -->
+<div id="main-screen">
+
+<header class="header">
+
+<div class="header-brand">
+<img src="logo.png" class="header-logo">
+<div class="header-title">
+すがコンサルティング＆パートナーズ
+<span>会員サイト</span>
+</div>
+</div>
+
+<div class="header-right">
+<span class="contract-badge" id="contract-badge"></span>
+<span class="user-email" id="user-email"></span>
+
+<button class="header-btn admin"
+id="admin-btn"
+onclick="location.href='admin.html'"
+style="display:none;">
+＋ 動画登録
+</button>
+
+<button class="header-btn" onclick="showChangePassword()">
+パスワード変更
+</button>
+
+<button class="header-btn" onclick="doLogout()">
+ログアウト
+</button>
+</div>
+
+</header>
+
+<div class="container">
+
+<div class="content-switch">
+
+<button id="tab-articles"
+class="content-switch-btn active"
+onclick="switchContent('articles',this)">
+📝 記事コンテンツ
+</button>
+
+<button id="tab-videos"
+class="content-switch-btn"
+onclick="switchContent('videos',this)">
+🎬 動画コンテンツ
+</button>
+
+</div>
+
+<!-- 動画 -->
+<div id="panel-videos" class="content-panel">
+
+<div class="section-header">
+<div class="section-title" id="video-count">
+動画を読み込んでいます...
+</div>
+</div>
+
+<div class="video-grid" id="video-grid">
+<div class="loading">読み込み中...</div>
+</div>
+
+</div>
+
+<!-- 記事 -->
+<div id="panel-articles" class="content-panel active">
+
+<div class="article-content-layout">
+
+  <div class="article-main-column">
+    <section>
+
+      <div class="section-header">
+        <div class="section-title" id="article-count">
+          記事を読み込んでいます...
+        </div>
+      </div>
+
+      <div id="article-menu" class="article-menu">
+
+        <button class="article-menu-card"
+        onclick="openArticleCategory('doctor')">
+          <h3>🩺 医師向けコンテンツ</h3>
+          <p>開業・経営・患者獲得など、医師向けの記事をまとめています。</p>
+        </button>
+
+        <button class="article-menu-card"
+        onclick="openArticleCategory('staff')">
+          <h3>🏥 事務向けコンテンツ</h3>
+          <p>医療・介護最新トピックス、制度・経営情報などをまとめています。</p>
+        </button>
+
+      </div>
+
+      <button id="article-back"
+      class="article-back"
+      onclick="showArticleMenu()">
+        ← 記事コンテンツの目次へ戻る
+      </button>
+
+      <div class="article-grid" id="article-grid">
+        <div class="loading">読み込み中...</div>
+      </div>
+
+    </section>
+  </div>
+
+  <aside id="topic-index" class="topic-index" aria-label="過去のトピックス">
+    <div class="topic-index-title">過去のトピックス <span style="font-size:11px;font-weight:400;">（事務向け記事）</span></div>
+    <div id="topic-index-list" class="topic-index-list">
+      <div class="topic-index-empty">読み込み中...</div>
+    </div>
+  </aside>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+<!-- 記事モーダル -->
+<div id="article-modal" onclick="closeArticleModal()">
+
+<div class="article-modal-card"
+onclick="event.stopPropagation()">
+
+<div id="article-cover-wrap" class="article-cover-wrap">
+<img id="article-cover-image" class="article-cover-image" src="" alt="">
+</div>
+
+<div class="article-modal-top">
+
+<div>
+<div class="article-modal-title"
+id="article-modal-title"></div>
+</div>
+
+<button class="article-close"
+onclick="closeArticleModal()">×</button>
+
+</div>
+
+<div id="article-audio-wrap" class="article-audio-wrap">
+  <div class="article-audio-label">🎧 今週のトピックスを音声で聴く</div>
+  <audio id="article-audio-player" class="article-audio-player" controls preload="metadata"></audio>
+</div>
+
+<div class="article-body"
+id="article-modal-body"></div>
+
+<div class="article-source"
+id="article-modal-source"></div>
+</div>
+</div>
+
+<!-- 制限モーダル -->
+<div id="lock-modal"
+style="
+display:none;
+position:fixed;
+inset:0;
+background:rgba(26,58,92,.4);
+z-index:300;
+align-items:center;
+justify-content:center;
+"
+onclick="closeLockModal()">
+
+<div class="auth-card"
+style="max-width:380px;text-align:center"
+onclick="event.stopPropagation()">
+
+<div style="font-size:48px">🔒</div>
+
+<div class="brand-name">
+視聴制限中
+</div>
+
+<p style="margin-top:15px">
+現在、このコンテンツは視聴できません。<br>
+契約状況または視聴権限をご確認ください
+</p>
+
+<span class="text-link"
+onclick="closeLockModal()">
+閉じる
+</span>
+
+</div>
+</div>
+
+<!-- パスワード変更 -->
+<div id="modal-overlay"
+style="
+display:none;
+position:fixed;
+inset:0;
+background:rgba(26,58,92,.4);
+z-index:300;
+align-items:center;
+justify-content:center;
+">
+
+<div class="auth-card">
+
+<div class="brand-name">
+パスワードの変更
+</div>
+
+<div class="form-group">
+<label>新しいパスワード</label>
+<input type="password" id="change-newpw">
+</div>
+
+<div class="form-group">
+<label>確認</label>
+<input type="password" id="change-confirm">
+</div>
+
+<button class="auth-btn"
+onclick="doChangePassword()">
+変更する
+</button>
+
+<span class="text-link"
+onclick="closeModal()">
+キャンセル
+</span>
+
+<div class="msg"
+id="change-msg"></div>
+
+</div>
+</div>
+
+<script>
+
+// ---- Notion記事リンク対応（2026-09-22） ----
+function getNotionArticleUrl(article) {
+  return String(
+    article?.notion_article_url ||
+    article?.notion_url ||
+    article?.notion_page_url ||
+    ""
+  ).trim();
+}
+
+function canOpenContractArticle() {
+  if (currentUser?.email === ADMIN_EMAIL) return true;
+  const status = String(currentProfile?.contract_status || "").trim();
+  return status === "契約中";
+}
+
+function openNotionArticle(article) {
+  const url = getNotionArticleUrl(article);
+  if (!url) return false;
+
+  if (!canOpenContractArticle()) {
+    if (typeof openLockModal === "function") openLockModal();
+    return true;
+  }
+
+  // Notion側のゲスト権限が最終的な閲覧制御になります。
+  window.open(url, "_blank", "noopener,noreferrer");
+  return true;
+}
+
+
+const SUPABASE_URL =
+"https://bicqctaxvponqbzjsjbw.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_YddDRAknpjNTrpq6dMVrjQ_VSrb14Yr";
+
+const ADMIN_EMAIL =
+"sugano@sugacon.net";
+
+const { createClient } = supabase;
+
+const sb =
+createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let currentUser=null;
+let currentProfile=null;
+let isRestricted=false;
+let allowedVideoIds=new Set();
+
+let allArticles=[];
+let articleFilter="all";
+
+const screens=[
+"login-screen",
+"firstpw-screen",
+"reset-screen"
+];
+
+function showScreen(id){
+
+screens.forEach(s=>
+document.getElementById(s)
+.classList.remove("active")
+);
+
+document.getElementById("main-screen")
+.style.display="none";
+
+if(id)
+document.getElementById(id)
+.classList.add("active");
+
+}
+
+function showMain(){
+
+showScreen(null);
+
+document.getElementById("main-screen")
+.style.display="block";
+
+}
+
+async function doLogin(){
+
+const email=
+document.getElementById("login-email")
+.value.trim();
+
+const pw=
+document.getElementById("login-pw")
+.value;
+
+const msg=
+document.getElementById("login-msg");
+
+const btn=
+document.getElementById("login-btn");
+
+msg.textContent="";
+
+btn.disabled=true;
+btn.textContent="ログイン中...";
+
+const {data,error}=
+await sb.auth.signInWithPassword({
+email,
+password:pw
+});
+
+btn.disabled=false;
+btn.textContent="ログイン";
+
+if(error){
+
+msg.textContent=
+"メールアドレスまたはパスワードが正しくありません";
+
+return;
+
+}
+
+const {data:profile}=
+await sb
+.from("user_profiles")
+.select(
+"is_first_login,is_restricted,user_type,plan_type,contract_status,contract_start_date,contract_end_date"
+)
+.eq("id",data.user.id)
+.single();
+
+if(
+data.user.email!==ADMIN_EMAIL &&
+profile?.contract_status==="契約終了"
+){
+  await sb.auth.signOut();
+  msg.textContent="このアカウントの契約は終了しています。";
+  return;
+}
+
+if(profile?.is_first_login){
+
+showScreen("firstpw-screen");
+
+}else{
+
+await setupUser(data.user,profile);
+
+}
+
+}
+
+async function doResetPassword(){
+
+const email=
+document.getElementById("reset-email")
+.value.trim();
+
+const msg=
+document.getElementById("reset-msg");
+
+if(!email){
+
+msg.textContent=
+"メールアドレスを入力してください";
+
+return;
+
+}
+
+const {data:resetProfile}=
+await sb
+.from("user_profiles")
+.select("contract_status")
+.eq("email",email)
+.maybeSingle();
+
+if(resetProfile?.contract_status==="契約終了"){
+  msg.textContent="このアカウントの契約は終了しています。";
+  return;
+}
+
+const {error}=
+await sb.auth.resetPasswordForEmail(
+email,
+{
+redirectTo:
+"https://sugano-crypto.github.io/video-site/"
+}
+);
+
+if(error){
+
+msg.textContent=
+"送信に失敗しました";
+
+}else{
+
+msg.textContent=
+"リセットメールを送信しました。";
+
+}
+
+}
+
+async function setupUser(user,profile){
+
+currentUser=user;
+currentProfile=profile||{};
+
+const isAdmin=
+user.email===ADMIN_EMAIL;
+
+const contractStatus=
+profile?.contract_status||"未契約";
+
+updateContractBadge(
+contractStatus,
+isAdmin
+);
+
+isRestricted=
+!isAdmin &&
+(
+profile?.is_restricted ||
+contractStatus==="停止" ||
+contractStatus==="契約終了"
+);
+
+document.getElementById("user-email")
+.textContent=user.email;
+
+updateAdminBtn(user.email);
+
+if(isRestricted){
+
+const MASTER=
+"39b6bc1c-9349-419d-bcb3-e8331571cf55";
+
+const {data:perms}=
+await sb
+.from("video_permissions")
+.select("video_id")
+.eq("user_id",MASTER);
+
+allowedVideoIds=
+new Set(
+(perms||[])
+.map(p=>p.video_id)
+);
+
+}
+
+showMain();
+
+setupContentForUser();
+
+await loadArticles();
+
+const userType=
+String(currentProfile?.user_type||"");
+
+if(isAdmin || userType==="医師")
+loadVideos();
+
+}
+
+async function doFirstPasswordChange(){
+
+const pw1=
+document.getElementById("firstpw-new").value;
+
+const pw2=
+document.getElementById("firstpw-confirm").value;
+
+const msg=
+document.getElementById("firstpw-msg");
+
+if(pw1.length<8){
+
+msg.textContent=
+"8文字以上で入力してください";
+
+return;
+
+}
+
+if(pw1!==pw2){
+
+msg.textContent=
+"パスワードが一致しません";
+
+return;
+
+}
+
+const {error}=
+await sb.auth.updateUser({
+password:pw1
+});
+
+if(error){
+
+msg.textContent=
+"変更に失敗しました";
+
+return;
+
+}
+
+const {
+data:{user}
+}=
+await sb.auth.getUser();
+
+await sb
+.from("user_profiles")
+.update({
+is_first_login:false
+})
+.eq("id",user.id);
+
+const {data:profile}=
+await sb
+.from("user_profiles")
+.select("*")
+.eq("id",user.id)
+.single();
+
+await setupUser(
+user,
+profile
+);
+
+}
+
+function updateAdminBtn(email){
+
+const btn=
+document.getElementById("admin-btn");
+
+if(btn)
+btn.style.display=
+email===ADMIN_EMAIL
+?"inline-block"
+:"none";
+
+if(email===ADMIN_EMAIL)
+document.body.classList.add("is-admin");
+
+}
+
+function updateContractBadge(
+status,
+isAdmin
+){
+
+const badge=
+document.getElementById(
+"contract-badge"
+);
+
+if(isAdmin){
+
+badge.textContent="管理者";
+badge.className=
+"contract-badge active";
+
+return;
+
+}
+
+badge.textContent=
+status||"未契約";
+
+if(
+status==="未契約"
+){
+
+badge.className=
+"contract-badge paused";
+
+}else if(
+status==="契約終了"
+){
+
+badge.className=
+"contract-badge ended";
+
+}else{
+
+badge.className=
+"contract-badge active";
+
+}
+
+}
+
+function showLockModal(){
+
+document.getElementById(
+"lock-modal"
+).style.display="flex";
+
+}
+
+function closeLockModal(){
+
+document.getElementById(
+"lock-modal"
+).style.display="none";
+
+}
+
+function showChangePassword(){
+
+document.getElementById(
+"modal-overlay"
+).style.display="flex";
+
+}
+
+function closeModal(){
+
+document.getElementById(
+"modal-overlay"
+).style.display="none";
+
+}
+
+async function doChangePassword(){
+
+const pw1=
+document.getElementById(
+"change-newpw"
+).value;
+
+const pw2=
+document.getElementById(
+"change-confirm"
+).value;
+
+const msg=
+document.getElementById(
+"change-msg"
+);
+
+if(pw1.length<8){
+
+msg.textContent=
+"8文字以上で入力してください";
+
+return;
+
+}
+
+if(pw1!==pw2){
+
+msg.textContent=
+"パスワードが一致しません";
+
+return;
+
+}
+
+const {error}=
+await sb.auth.updateUser({
+password:pw1
+});
+
+msg.textContent=
+error
+?"変更に失敗しました"
+:"変更しました！";
+
+}
+
+async function doLogout(){
+
+await sb.auth.signOut();
+
+showScreen(
+"login-screen"
+);
+
+}
+
+async function loadVideos(){
+
+const {data,error}=
+await sb
+.from("videos")
+.select("*")
+.order(
+"date",
+{ascending:false}
+);
+
+const grid=
+document.getElementById(
+"video-grid"
+);
+
+if(error||!data){
+
+grid.innerHTML=
+'<div class="loading">動画データの読み込みに失敗しました。</div>';
+
+return;
+
+}
+
+document.getElementById(
+"video-count"
+).textContent=
+`全 ${data.length} 本の動画`;
+
+grid.innerHTML=
+data.map(v=>{
+
+const canWatch=
+!isRestricted ||
+allowedVideoIds.has(v.id);
+
+if(canWatch){
+
+return `
+<div class="video-card-wrap">
+
+<a class="video-card"
+href="${esc(v.url)}"
+target="_blank">
+
+<div class="thumbnail-wrap">
+
+<img
+src="https://img.youtube.com/vi/${esc(v.youtube_id)}/hqdefault.jpg">
+
+<div class="play-icon"></div>
+
+</div>
+
+<div class="video-info">
+
+<div class="video-title">
+${esc(v.title)}
+</div>
+
+<div class="video-desc">
+${esc(v.description||"")}
+</div>
+
+<div class="video-date">
+${fmtDate(v.date)}
+</div>
+
+</div>
+
+</a>
+
+</div>
+`;
+
+}else{
+
+return `
+<div class="video-card locked"
+onclick="showLockModal()">
+
+<div class="thumbnail-wrap">
+
+<img
+src="https://img.youtube.com/vi/${esc(v.youtube_id)}/hqdefault.jpg">
+
+<div class="lock-icon">
+🔒
+</div>
+
+<div class="lock-badge">
+視聴権限がありません
+</div>
+
+</div>
+
+<div class="video-info">
+
+<div class="video-title">
+${esc(v.title)}
+</div>
+
+</div>
+
+</div>
+`;
+
+}
+
+}).join("");
+
+}
+
+function setupContentForUser(){
+
+const isAdmin=
+currentUser?.email===ADMIN_EMAIL;
+
+const userType=
+String(
+currentProfile?.user_type||""
+);
+
+const videoTab=
+document.getElementById(
+"tab-videos"
+);
+
+const articleTab=
+document.getElementById(
+"tab-articles"
+);
+
+switchContent(
+"articles",
+articleTab
+);
+
+if(
+!isAdmin &&
+userType==="事務"
+){
+
+videoTab.style.display="none";
+
+openArticleCategory(
+"staff",
+false
+);
+
+}else{
+
+videoTab.style.display="";
+
+showArticleMenu();
+
+}
+
+}
+
+function showArticleMenu(){
+
+const menu=
+document.getElementById(
+"article-menu"
+);
+
+const back=
+document.getElementById(
+"article-back"
+);
+
+const grid=
+document.getElementById(
+"article-grid"
+);
+
+const count=
+document.getElementById(
+"article-count"
+);
+
+menu.classList.add("show");
+
+back.classList.remove("show");
+
+grid.style.display="none";
+
+count.textContent=
+"記事コンテンツ";
+
+}
+
+function openArticleCategory(
+type,
+showBack=true
+){
+
+articleFilter=type;
+
+document.getElementById(
+"article-menu"
+).classList.remove("show");
+
+document.getElementById(
+"article-back"
+).classList.toggle(
+"show",
+showBack
+);
+
+document.getElementById(
+"article-grid"
+).style.display="grid";
+
+renderArticles();
+
+}
+
+function switchContent(
+type,
+btn
+){
+
+document
+.querySelectorAll(
+".content-switch-btn"
+)
+.forEach(b=>
+b.classList.remove("active")
+);
+
+document
+.querySelectorAll(
+".content-panel"
+)
+.forEach(p=>
+p.classList.remove("active")
+);
+
+if(btn)
+btn.classList.add("active");
+
+document.getElementById(
+type==="articles"
+?"panel-articles"
+:"panel-videos"
+)
+.classList.add("active");
+
+updateTopicIndexVisibility();
+
+if(type==="articles"){
+
+const isAdmin=
+currentUser?.email===ADMIN_EMAIL;
+
+const userType=
+String(
+currentProfile?.user_type||""
+);
+
+if(
+!isAdmin &&
+userType==="事務"
+){
+
+openArticleCategory(
+"staff",
+false
+);
+
+}else{
+
+showArticleMenu();
+
+}
+
+}
+
+}
+
+function normalizeAudience(v){
+
+const s=
+String(v||"")
+.trim()
+.toLowerCase();
+
+if([
+"医師",
+"医師向け",
+"doctor",
+"doctors"
+].includes(s))
+return "doctor";
+
+if([
+"事務",
+"事務向け",
+"staff",
+"office",
+"admin"
+].includes(s))
+return "staff";
+
+if([
+"全員",
+"共通",
+"all",
+"both"
+].includes(s))
+return "all";
+
+return s||"all";
+
+}
+
+function canReadArticle(a){
+
+if(currentUser?.email===ADMIN_EMAIL)
+return true;
+
+const st=currentProfile?.contract_status||"未契約";
+const ut=String(currentProfile?.user_type||"");
+const aud=normalizeAudience(a.target_audience);
+
+if(st==="契約終了")
+return false;
+
+if(ut==="医師")
+return aud==="doctor" || aud==="all";
+
+if(ut==="事務")
+return aud==="staff" || aud==="all";
+
+return false;
+
+}
+
+function shouldShowArticle(a){
+
+if(currentUser?.email===ADMIN_EMAIL)
+return true;
+
+const st=currentProfile?.contract_status||"未契約";
+const ut=String(currentProfile?.user_type||"");
+const aud=normalizeAudience(a.target_audience);
+
+if(st==="契約終了")
+return false;
+
+if(ut==="医師")
+return aud==="doctor" || aud==="all";
+
+if(ut==="事務")
+return aud==="staff" || aud==="all";
+
+return false;
+
+}
+
+async function loadArticles(){
+
+const grid=
+document.getElementById(
+"article-grid"
+);
+
+const count=
+document.getElementById(
+"article-count"
+);
+
+const {data,error}=
+await sb.rpc("sc_member_articles");
+
+if(error){
+
+console.error(error);
+
+count.textContent=
+"記事コンテンツ";
+
+grid.innerHTML=
+'<div class="loading">記事データの読み込みに失敗しました。</div>';
+
+return;
+
+}
+
+allArticles=
+(data||[])
+.filter(a=>{
+
+const s=
+String(
+a.status||""
+).toLowerCase();
+
+return (
+!s ||
+[
+"published",
+"公開",
+"公開中"
+].includes(s)
+);
+
+})
+.filter(
+shouldShowArticle
+);
+
+renderArticles();
+renderTopicIndex();
+updateTopicIndexVisibility();
+
+}
+
+function renderArticles(){
+
+const grid=
+document.getElementById(
+"article-grid"
+);
+
+const count=
+document.getElementById(
+"article-count"
+);
+
+let arr=[];
+
+if(
+articleFilter==="doctor"
+){
+
+arr=
+allArticles.filter(
+a=>
+normalizeAudience(
+a.target_audience
+)==="doctor"
+);
+
+}else if(
+articleFilter==="staff"
+){
+
+arr=
+allArticles.filter(
+a=>
+[
+"staff",
+"all"
+].includes(
+normalizeAudience(
+a.target_audience
+)
+)
+);
+
+}else{
+
+arr=allArticles;
+
+}
+
+const filterLabel=
+articleFilter==="doctor"
+?"医師向けコンテンツ"
+:articleFilter==="staff"
+?"事務向けコンテンツ"
+:"記事コンテンツ";
+
+count.textContent=
+`${filterLabel}　${arr.length} 本`;
+
+grid.innerHTML="";
+
+if(!arr.length){
+
+grid.innerHTML=
+'<p style="color:#718096">記事はまだありません。</p>';
+
+return;
+
+}
+
+arr.forEach(a=>{
+
+const card=
+document.createElement(
+"div"
+);
+
+const notionUrl=getNotionArticleUrl(a);
+const locked=!canOpenContractArticle();
+
+card.className=
+"article-card" +
+(notionUrl ? " notion-article" : "") +
+(locked ? " locked-article" : "");
+
+card.onclick=
+()=>openArticle(a.id);
+
+card.innerHTML=`
+<h3>
+${esc(a.title||"無題")}
+</h3>
+
+<div class="article-date">
+${a.published_at
+?fmtDate(a.published_at)
+:""}
+</div>
+${locked ? '<div class="article-access-note">🔒 ご契約中の会員様向けです</div>' : ''}
+`;
+
+grid.appendChild(card);
+
+});
+
+}
+
+
+/* ==========================================
+   記事表示
+   free_body → body の順番で両方表示
+   ========================================== */
+
+
+let currentArticleId = null;
+let articleViewVersion=0;
+let articleMediaTimer=null;
+
+function getTopicViewerArticles(){
+  return allArticles
+    /* 本文形式にかかわらず、閲覧対象の記事を新しい順に表示する。 */
+    .filter(a => canReadArticle(a))
+    .sort((a,b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
+}
+
+function getArticleBlocks(article){
+  if(Array.isArray(article?.notion_blocks)) return article.notion_blocks;
+  if(typeof article?.notion_blocks==="string"){
+    try{
+      const parsed=JSON.parse(article.notion_blocks);
+      return Array.isArray(parsed) ? parsed : [];
+    }catch(e){
+      return [];
+    }
+  }
+  return [];
+}
+
+/* The renderer and index share the same plain-text heading rules. */
+function articlePlainText(article){
+  const blocks=getArticleBlocks(article);
+  if(blocks.length) return blocks.map(b=>{
+    const x=b?.[b?.type]||{};
+    const text=(x.rich_text||[]).map(r=>r?.plain_text ?? r?.text?.content ?? "").join("");
+    return b.type==="numbered_list_item" ? `1. ${text}` : text;
+  }).join("\n");
+  return [article.free_body,article.body].filter(Boolean).join("\n\n");
+}
+
+function isTopicHeading(text){
+  return !/すがCon[’'‘]?s\s*Insight|参考資料|音声|コラム|^今週の(?:医療・介護)?トピックス$/i.test(text.trim());
+}
+
+function extractTopicTitles(article){
+  const text=articlePlainText(article);
+  const bracket=[...text.matchAll(/【([^【】\r\n]+)】/g)]
+    .map(m=>m[1].trim()).filter(isTopicHeading);
+  const numbered=text.split(/\r?\n/).map(line=>line.trim().match(/^[0-9０-９]+\s*[.．、]\s*(.+)$/))
+    .filter(Boolean).map(m=>m[1].trim()).filter(isTopicHeading);
+  const titles=bracket.length ? bracket : numbered;
+  const seen=new Set();
+  return titles.filter(t=>{
+    const key=t.replace(/^[0-9０-９]+\s*[.．、]\s*/, "").trim();
+    if(seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
+
+function renderTopicIndex(){
+  const box=document.getElementById("topic-index");
+  const list=document.getElementById("topic-index-list");
+  if(!box || !list) return;
+
+  const articles=getTopicViewerArticles();
+  box.classList.add("show");
+
+  if(!articles.length){
+    list.innerHTML='<div class="topic-index-empty">過去のトピックスはまだありません。</div>';
+    return;
+  }
+
+  list.replaceChildren();
+  articles.forEach((a,index)=>{
+    const week=document.createElement("div");
+    week.className="topic-week"+(index===0 ? " open" : "");
+    const button=document.createElement("button");
+    button.type="button";
+    button.className="topic-week-date";
+    const arrow=document.createElement("span");
+    arrow.className="topic-week-arrow";
+    arrow.textContent=index===0 ? "▼" : "▶";
+    const title=document.createElement("span");
+    title.textContent=a.title||"無題";
+    button.append(arrow,title);
+    button.addEventListener("click",()=>toggleTopicWeek(button));
+    const items=document.createElement("div");
+    items.className="topic-week-items";
+    const topics=canOpenContractArticle() ? extractTopicTitles(a) : [];
+    (topics.length ? topics : ["記事を開く"]).forEach((text,i)=>{
+      const link=document.createElement("button");
+      link.type="button";
+      link.className="topic-title-link";
+      link.textContent=text;
+      link.addEventListener("click",()=>openTopicFromIndex(a.id,topics.length ? i : -1));
+      items.appendChild(link);
+    });
+    week.append(button,items);
+    list.appendChild(week);
+  });
+}
+
+function toggleTopicWeek(btn){
+  const week=btn.closest(".topic-week");
+  if(!week) return;
+  const open=!week.classList.contains("open");
+  week.classList.toggle("open",open);
+  const arrow=btn.querySelector(".topic-week-arrow");
+  if(arrow) arrow.textContent=open ? "▼" : "▶";
+}
+
+async function openTopicFromIndex(articleId,topicIndex){
+  const article=allArticles.find(a=>String(a.id)===String(articleId));
+  await openArticle(articleId);
+  if(!article || !canReadArticle(article) || !canOpenContractArticle() || topicIndex<0) return;
+  const title=extractTopicTitles(article)[topicIndex];
+  const normalize=t=>String(t||"").replace(/[【】]/g,"").replace(/^[0-9０-９]+\s*[.．、]\s*/,"").trim();
+  const body=document.getElementById("article-modal-body");
+  const target=[...body.querySelectorAll("h2,h3,h4,li,p")]
+    .find(h=>normalize(h.textContent)===normalize(title));
+  if(target) target.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function updateTopicIndexVisibility(){
+  const box=document.getElementById("topic-index");
+  const articlePanel=document.getElementById("panel-articles");
+  if(!box || !articlePanel) return;
+  const articlesActive=articlePanel.classList.contains("active");
+  box.classList.toggle("show",articlesActive);
+  if(articlesActive) renderTopicIndex();
+}
+
+async function openArticle(id){
+
+currentArticleId=id;
+const viewVersion=++articleViewVersion;
+clearTimeout(articleMediaTimer);
+
+let a=allArticles.find(x=>String(x.id)===String(id));
+if(!a) return;
+
+if(!canReadArticle(a) || !canOpenContractArticle()){
+  showLockModal();
+  return;
+}
+
+if(!canReadArticle(a)){
+  showLockModal();
+  return;
+}
+
+// Re-check current server-side entitlement before rendering cached paid content.
+const {data:fresh,error:readError}=await sb.rpc("sc_member_article",{p_id:id});
+if(viewVersion!==articleViewVersion) return;
+if(readError || !fresh){ showLockModal(); return; }
+a=fresh;
+Object.assign(allArticles.find(x=>String(x.id)===String(id)),fresh);
+let signedMedia={cover:null,audio:null};
+let mediaError=false;
+if(a.notion_cover_url || a.notion_audio_url){
+  try{
+    const {data,error}=await sb.functions.invoke("article-media-links",{body:{article_id:String(id)}});
+    if(error || !data) throw Error("media_unavailable");
+    signedMedia=data;
+  }catch{ mediaError=true; }
+}
+if(viewVersion!==articleViewVersion) return;
+document.getElementById("article-modal-title").textContent=a.title||"無題";
+
+const coverWrap=document.getElementById("article-cover-wrap");
+const coverImage=document.getElementById("article-cover-image");
+const coverUrl=String(signedMedia.cover||"").trim();
+
+if(coverUrl){
+  coverImage.src=coverUrl;
+  coverImage.alt=(a.title||"記事")+" のカバー画像";
+  coverWrap.classList.add("show");
+}else{
+  coverImage.removeAttribute("src");
+  coverImage.alt="";
+  coverWrap.classList.remove("show");
+}
+
+/* Notion audio */
+const audioWrap=document.getElementById("article-audio-wrap");
+const audioPlayer=document.getElementById("article-audio-player");
+const audioUrl=String(signedMedia.audio||"").trim();
+
+if(audioUrl){
+  audioPlayer.src=audioUrl;
+  audioWrap.classList.add("show");
+}else{
+  audioPlayer.pause();
+  audioPlayer.removeAttribute("src");
+  audioPlayer.load();
+  audioWrap.classList.remove("show");
+}
+
+
+
+
+const freeBody=String(a.free_body||"").trim();
+const paidBody=String(a.body||"").trim();
+const isAdmin=currentUser?.email===ADMIN_EMAIL;
+const contractStatus=currentProfile?.contract_status||"未契約";
+
+let articleBody="";
+
+if(isAdmin || contractStatus==="契約中"){
+ let blocks = [];
+
+if (Array.isArray(a.notion_blocks)) {
+  blocks = a.notion_blocks;
+} else if (typeof a.notion_blocks === "string") {
+  try {
+    const parsed = JSON.parse(a.notion_blocks);
+    if (Array.isArray(parsed)) blocks = parsed;
+  } catch (e) {
+    console.error("notion_blocks parse error:", e);
+  }
+}
+
+
+
+  if(blocks.length){
+    document.getElementById("article-modal-body").innerHTML = renderNotionBlocks(blocks);
+  }else{
+    if(freeBody) articleBody+=freeBody;
+    if(freeBody && paidBody) articleBody+="\n\n";
+    if(paidBody) articleBody+=paidBody;
+    document.getElementById("article-modal-body").innerHTML=
+      formatArticleText(stripDuplicateAudioGuideFromText(articleBody) || "本文が登録されていません。");
+  }
+}else{
+  document.getElementById("article-modal-body").innerHTML=
+    formatArticleText(stripDuplicateAudioGuideFromText(freeBody) || "この記事の無料公開部分はありません。");
+}
+
+const source=document.getElementById("article-modal-source");
+source.innerHTML="";
+
+if(!isAdmin && contractStatus==="未契約"){
+  source.innerHTML=`
+    <div style="margin-top:8px;padding:20px;border-radius:12px;background:#f5f8fc;border:1px solid #e8eef5;text-align:center;">
+      <div style="font-size:16px;font-weight:700;color:#1a3a5c;margin-bottom:8px;">
+        🔒 続きはご契約中の会員様向けです
+      </div>
+      <div style="font-size:13px;line-height:1.8;color:#4a6280;">
+        続きをご覧いただくにはご契約が必要です。<br>
+        ご契約については、すがコンサルティング＆パートナーズまでお問い合わせください。
+      </div>
+      <a href="mailto:info@sugacon.net"
+         style="display:inline-block;margin-top:14px;padding:10px 18px;border-radius:8px;background:#1a3a5c;color:#fff;text-decoration:none;font-size:13px;font-weight:700;">
+        契約について問い合わせる
+      </a>
+    </div>
+  `;
+}
+
+if(mediaError){
+  const warning=document.createElement("p");
+  warning.textContent="画像・音声を読み込めませんでした。記事を開き直してください。";
+  source.appendChild(warning);
+}
+document.getElementById("article-modal").style.display="flex";
+if(!mediaError && (signedMedia.cover || signedMedia.audio)){
+  const renew=async()=>{
+    if(viewVersion!==articleViewVersion) return;
+    try{
+      const {data,error}=await sb.functions.invoke("article-media-links",{body:{article_id:String(id)}});
+      if(viewVersion!==articleViewVersion) return;
+      if(error || !data) throw Error("media_unavailable");
+      if(data.cover)coverImage.src=data.cover;
+      if(data.audio){
+        const position=audioPlayer.currentTime,playing=!audioPlayer.paused;
+        audioPlayer.src=data.audio;
+        audioPlayer.addEventListener("loadedmetadata",()=>{
+          if(viewVersion!==articleViewVersion) return;
+          audioPlayer.currentTime=position;
+          if(playing)audioPlayer.play().catch(()=>{});
+        },{once:true});
+      }
+      articleMediaTimer=setTimeout(renew,240000);
+    }catch{
+      if(viewVersion!==articleViewVersion) return;
+      audioPlayer.pause();audioPlayer.removeAttribute("src");audioPlayer.load();
+      coverImage.removeAttribute("src");
+      source.textContent="閲覧状態を確認できませんでした。記事を開き直してください。";
+    }
+  };
+  articleMediaTimer=setTimeout(renew,240000);
+}
+
+}
+
+function closeArticleModal(){
+
+articleViewVersion++;
+clearTimeout(articleMediaTimer);
+currentArticleId=null;
+
+document.getElementById(
+"article-modal"
+).style.display="none";
+
+const coverWrap=document.getElementById("article-cover-wrap");
+const coverImage=document.getElementById("article-cover-image");
+
+if(coverWrap) coverWrap.classList.remove("show");
+if(coverImage){
+  coverImage.removeAttribute("src");
+  coverImage.alt="";
+}
+
+
+
+const audioWrap=document.getElementById("article-audio-wrap");
+const audioPlayer=document.getElementById("article-audio-player");
+if(audioPlayer){
+  audioPlayer.pause();
+  audioPlayer.removeAttribute("src");
+  audioPlayer.load();
+}
+if(audioWrap) audioWrap.classList.remove("show");
+
+}
+
+
+function esc(s){
+
+return String(s)
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;");
+
+}
+
+
+function isDuplicateAudioGuideText(text){
+  const normalized=String(text||"")
+    .replace(/\s+/g," ")
+    .trim();
+
+  // 上部に実プレーヤーを表示するため、Notion本文側の案内文は重複表示しない。
+  return /^(?:🎧\s*)?今週のトピックスを音声で聴く(?:\s*[（(]?[0-9０-９]+[:：][0-9０-９]+[）)]?)?\s*$/.test(normalized);
+}
+
+function stripDuplicateAudioGuideFromText(text){
+  return String(text||"")
+    .split(/\r?\n/)
+    .filter(line=>!isDuplicateAudioGuideText(line))
+    .join("\n")
+    .trim();
+}
+
+function renderNotionBlocks(blocks){
+  if(!Array.isArray(blocks) || !blocks.length) return "本文が登録されていません。";
+
+  const richText = (arr=[]) => arr.map(r => {
+    const text = esc(r?.plain_text ?? r?.text?.content ?? "");
+    const href = safeArticleUrl(r?.href || r?.text?.link?.url);
+    let out = href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${text}</a>` : linkifyText(r?.plain_text ?? r?.text?.content ?? "");
+    const a=r?.annotations||{};
+    if(a.bold) out=`<strong>${out}</strong>`;
+    if(a.italic) out=`<em>${out}</em>`;
+    if(a.underline) out=`<u>${out}</u>`;
+    if(a.strikethrough) out=`<s>${out}</s>`;
+    if(a.code) out=`<code>${out}</code>`;
+    return out;
+  }).join("");
+
+  const render = b => {
+    const t=b?.type; const x=b?.[t]||{}; const txt=richText(x.rich_text);
+    const plain=(x.rich_text||[]).map(r=>r?.plain_text ?? r?.text?.content ?? "").join("");
+    if(isDuplicateAudioGuideText(plain)) return "";
+    if(t==="paragraph") return formatArticleText(plain, (start,end)=>{
+      let offset=0;
+      return (x.rich_text||[]).map(r=>{
+        const text=String(r?.plain_text ?? r?.text?.content ?? "");
+        const from=Math.max(0,start-offset), to=Math.min(text.length,end-offset);
+        offset+=text.length;
+        return to>from ? richText([{...r,plain_text:text.slice(from,to)}]) : "";
+      }).join("");
+    });
+    if(t==="heading_1") return `<h2>${txt}</h2>`;
+    if(t==="heading_2") return `<h3>${txt}</h3>`;
+    if(t==="heading_3") return `<h4>${txt}</h4>`;
+    if(t==="bulleted_list_item") return `<ul><li>${txt}</li></ul>`;
+    if(t==="numbered_list_item") return `<ol><li>${txt}</li></ol>`;
+    if(t==="quote") return `<blockquote>${txt}</blockquote>`;
+    if(t==="callout") return `<div class="notion-callout">${txt}</div>`;
+    if(t==="divider") return `<hr>`;
+    if(t==="code") return `<pre><code>${txt}</code></pre>`;
+    if(t==="image"){ const u=safeArticleUrl(x?.file?.url||x?.external?.url); return u?`<img class="notion-image" src="${esc(u)}" alt="">`:""; }
+    if(t==="bookmark" && safeArticleUrl(x.url)) return `<p><a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.url)}</a></p>`;
+    return txt ? `<p>${txt}</p>` : "";
+  };
+  return blocks.map(render).join("");
+}
+
+function safeArticleUrl(value){
+  const text=String(value||"").trim();
+  if(!/^https?:\/\//i.test(text)) return "";
+  try{ const url=new URL(text); return ["http:","https:"].includes(url.protocol) ? text : ""; }
+  catch{ return ""; }
+}
+
+function linkifyText(text){
+  const raw=String(text||"");
+  const pattern=/https?:\/\/[^\s<>"']+/gi;
+  let html="",offset=0;
+  for(const match of raw.matchAll(pattern)){
+    let url=match[0],trailing="";
+    while(/[。、，．,.!！?？)）\]】」』〉》]$/.test(url)){
+      trailing=url.slice(-1)+trailing; url=url.slice(0,-1);
+    }
+    html+=esc(raw.slice(offset,match.index));
+    html+=safeArticleUrl(url) ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>` : esc(url);
+    html+=esc(trailing); offset=match.index+match[0].length;
+  }
+  return html+esc(raw.slice(offset));
+}
+
+/* Split only the display; source strings and Notion rich-text offsets stay intact. */
+function formatArticleText(value,renderRange){
+  const text=String(value||"");
+  const inline=renderRange || ((start,end)=>linkifyText(text.slice(start,end)));
+  const pattern=/【([^【】\r\n]+)】|\r?\n[ \t]*\r?\n/g;
+  let html="",offset=0;
+  const paragraph=(start,end)=>text.slice(start,end).trim() ? `<p>${inline(start,end)}</p>` : "";
+  for(const match of text.matchAll(pattern)){
+    html+=paragraph(offset,match.index);
+    if(match[1]){
+      const insight=/すがCon[’'‘]?s\s*Insight/i.test(match[1]);
+      html+=`<h3 class="article-section-heading${insight ? " article-insight-heading" : ""}">${inline(match.index,match.index+match[0].length)}</h3>`;
+    }
+    offset=match.index+match[0].length;
+  }
+  return html+paragraph(offset,text.length);
+}
+
+
+function fmtDate(d){
+
+const dt=
+new Date(d);
+
+return `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日`;
+
+}
+
+
+window.addEventListener(
+"DOMContentLoaded",
+async()=>{
+
+const {
+data:{session}
+}=
+await sb.auth.getSession();
+
+if(!session){
+
+showScreen(
+"login-screen"
+);
+
+return;
+
+}
+
+const {data:profile}=
+await sb
+.from("user_profiles")
+.select(
+"is_first_login,is_restricted,user_type,plan_type,contract_status,contract_start_date,contract_end_date"
+)
+.eq(
+"id",
+session.user.id
+)
+.single();
+
+if(
+session.user.email!==ADMIN_EMAIL &&
+profile?.contract_status==="契約終了"
+){
+  await sb.auth.signOut();
+  showScreen("login-screen");
+  const msg=document.getElementById("login-msg");
+  if(msg) msg.textContent="このアカウントの契約は終了しています。";
+  return;
+}
+
+if(
+profile &&
+profile.is_first_login
+){
+
+showScreen(
+"firstpw-screen"
+);
+
+return;
+
+}
+
+await setupUser(
+session.user,
+profile
+);
+
+});
+
+
+document.addEventListener(
+"keydown",
+e=>{
+
+if(
+e.key==="Enter" &&
+document.getElementById(
+"login-screen"
+)
+.classList.contains(
+"active"
+)
+){
+
+doLogin();
+
+}
+
+});
+
+</script>
+
+</body>
+</html>
+
