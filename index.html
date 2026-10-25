@@ -2208,7 +2208,8 @@ let currentArticleId = null;
 
 function getTopicViewerArticles(){
   return allArticles
-    /* 本文形式にかかわらず、閲覧対象の記事を新しい順に表示する。 */
+    /* 右側の索引は、管理者も事務向け・共通の記事だけを対象にする。 */
+    .filter(a => ["staff","all"].includes(normalizeAudience(a.target_audience)))
     .filter(a => canReadArticle(a))
     .sort((a,b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
 }

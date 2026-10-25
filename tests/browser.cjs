@@ -27,7 +27,28 @@ const fs=require('node:fs');const assert=require('node:assert/strict');
  assert.equal(await page.locator('#article-modal-title').textContent(),'2026年10月18日号');
  await page.evaluate(()=>{closeArticleModal();currentUser={email:'member@example.com'};currentProfile={user_type:'医師',contract_status:'未契約'};renderTopicIndex();});
  assert.equal(await page.locator('#topic-index-list').textContent().then(t=>t.includes('記事見出し')),false);
+ await page.evaluate(()=>{
+  currentUser={email:ADMIN_EMAIL};currentProfile={contract_status:'契約中'};
+  allArticles=[
+   {id:'doctor-1',title:'推計患者数の落とし穴と新規患者獲得戦略',target_audience:'doctor',published_at:'2026-10-25',body:'医師向け本文'},
+   {id:'doctor-2',title:'医師向け記事（検証用）',target_audience:'doctor',published_at:'2026-10-24',body:'医師向け本文2'},
+   {id:'weekly-staff',title:'週刊医療・介護トピックス',target_audience:'staff',published_at:'2026-10-18',body:'【今週の医療政策】\n本文'},
+   {id:'weekly-all',title:'週刊医療・介護トピックス（共通）',target_audience:'all',published_at:'2026-10-11',body:'【今週の介護政策】\n本文'}
+  ];
+  renderTopicIndex();articleFilter='all';renderArticles();
+ });
+ assert.equal(await page.locator('#topic-index-list .topic-week').count(),2);
+ assert.equal((await page.locator('#topic-index-list').textContent()).includes('推計患者数'),false);
+ assert.equal((await page.locator('#topic-index-list').textContent()).includes('医師向け記事'),false);
+ assert.equal((await page.locator('#topic-index-list').textContent()).includes('週刊医療・介護トピックス'),true);
+ assert.equal(await page.locator('#article-grid .article-card').count(),4);
+ await page.evaluate(()=>{articleFilter='doctor';renderArticles();openArticle('doctor-1');});
+ assert.equal(await page.locator('#article-grid .article-card').count(),2);
+ assert.equal(await page.locator('#article-modal-title').textContent(),'推計患者数の落とし穴と新規患者獲得戦略');
+ await page.evaluate(()=>{closeArticleModal();articleFilter='staff';renderArticles();});
+ assert.equal(await page.locator('#article-grid .article-card').count(),2);
  assert.deepEqual(errors,[]);
- console.log('PASS: desktop/mobile, DOM escaping, safe links, index navigation with quoted ID, restricted index');
+ console.log('PASS: desktop/mobile, existing viewer, admin sidebar excludes two doctor fixtures, weekly staff/all retained, central doctor list/access preserved');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
+
