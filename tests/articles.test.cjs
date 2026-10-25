@@ -44,3 +44,28 @@ test('index has no block requirement or ID cutoff; sorted and access filtered',(
  assert.equal(JSON.stringify(run('getTopicViewerArticles().map(a=>a.id)')),JSON.stringify(['staff']));
  run(`currentProfile.contract_status='契約終了'`);assert.equal(run('getTopicViewerArticles().length'),0);assert.equal(run('canOpenContractArticle()'),false);
 });
+
+
+test('admin sidebar excludes two doctor articles while weekly staff/all and doctor access remain',()=>{
+ run(`currentUser={email:ADMIN_EMAIL};currentProfile={contract_status:'契約中'};
+ allArticles=[
+ {id:'doctor-1',title:'推計患者数の落とし穴と新規患者獲得戦略',target_audience:'doctor',published_at:'2026-10-25'},
+ {id:'doctor-2',title:'医師向け記事（検証用）',target_audience:'医師向け',published_at:'2026-10-24'},
+ {id:'weekly-staff',title:'週刊医療・介護トピックス',target_audience:'staff',published_at:'2026-10-18'},
+ {id:'weekly-all',title:'週刊医療・介護トピックス（共通）',target_audience:'all',published_at:'2026-10-11'}]`);
+ assert.equal(JSON.stringify(run('getTopicViewerArticles().map(a=>a.id)')),JSON.stringify(['weekly-staff','weekly-all']));
+ assert.equal(run('allArticles.length'),4);
+ assert.equal(run('canReadArticle(allArticles[0])'),true);
+ assert.equal(run('canReadArticle(allArticles[1])'),true);
+});
+
+test('sidebar keeps existing access checks and excludes unknown audience types',()=>{
+ run(`allArticles=[{id:'doctor',target_audience:'doctor'},{id:'staff',target_audience:'staff'},{id:'all',target_audience:'all'},{id:'unknown',target_audience:'unrecognized'}];currentUser={email:'staff@example.test'};currentProfile={user_type:'事務',contract_status:'契約中'}`);
+ assert.equal(JSON.stringify(run('getTopicViewerArticles().map(a=>a.id)')),JSON.stringify(['staff','all']));
+ run(`currentProfile={user_type:'医師',contract_status:'契約中'}`);
+ assert.equal(JSON.stringify(run('getTopicViewerArticles().map(a=>a.id)')),JSON.stringify(['all']));
+ run(`currentProfile.contract_status='契約終了'`);
+ assert.equal(run('getTopicViewerArticles().length'),0);
+ run(`currentUser={email:ADMIN_EMAIL}`);
+ assert.equal(JSON.stringify(run('getTopicViewerArticles().map(a=>a.id)')),JSON.stringify(['staff','all']));
+});
